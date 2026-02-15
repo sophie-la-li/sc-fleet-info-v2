@@ -1,10 +1,10 @@
 {
     "addons": {
-        "@sc-fleet-info-v2": {
+        "@sll-sc-fleet-info-v2": {
             "updates": [
                 { 
-                    "version": "0.1",
-                    "update_link": "https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.1/sc-fleet-info-v2-ff.xpi"
+                    "version": "0.3.2",
+                    "update_link": "https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.3.2/f6c12ef29cac4e9f9097-0.3.2.xpi"
                 }
             ]
         }
