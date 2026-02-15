@@ -5,6 +5,10 @@
                 { 
                     "version": "0.3.2",
                     "update_link": "https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.3.2/f6c12ef29cac4e9f9097-0.3.2.xpi"
+                },
+                { 
+                    "version": "0.3.3",
+                    "update_link": "https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.3.2/f6c12ef29cac4e9f9097-0.3.3.xpi"
                 }
             ]
         }
