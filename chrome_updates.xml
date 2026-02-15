@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
     <app appid='fapndpnbgiamhingpocpokloioficofc'>
-        <updatecheck codebase='https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.3.4/chrome-extension-0.3.4.crx' version='0.3.4' />
         <updatecheck codebase='https://github.com/sophie-la-li/sc-fleet-info-v2/releases/download/0.3.4/chrome-extension-0.3.5.crx' version='0.3.5' />
     </app>
 </gupdate>
