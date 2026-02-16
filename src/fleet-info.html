@@ -1,0 +1,79 @@
+<!--siis-->
+<!DOCTYPE html>
+<html id="scfi_html">
+    <head>
+        <meta charset="utf-8">
+        <title>SC Fleet Info</title>
+        <script src="/jquery-4.0.0.min.js"></script>
+        <script src="/fleet-info.js"></script>
+        <link rel="stylesheet" href="/fleet-info.css"></link>
+    </head>
+    <body id="scfi_body">
+<!--siie-->
+        <div id="scfi_wrapper">
+            <div id="scfi">
+                <div id="window_menu">
+                    <button id="close_button">Close</button>
+                </div>
+
+                <div id="sidebar">
+                    <h1>SC Fleet Info</h1>
+                    <div>2.0.0</div>
+                    <ul>
+                        <li>
+                            <label>Group By:</label>
+                            <select id="group_by">
+                                <option value="type">Type</option>
+                                <option value="manufacturer">Manufacturer</option>
+                                <option value="insurance_short">Insurance</option>
+                            </select>   
+                        </li>
+                        <li>
+                            <label>Show Types:</label>
+                            <select id="show_types" multiple>
+                                <option value="ship">Ships</option>
+                                <option value="equipment">Equipment</option>
+                                <option value="decoration">Decorations</option>
+                            </select> 
+                        </li>
+                        <li>
+                            <label>Hide Unmapped Paints:</label>
+                            <input type="checkbox" id="hide_paints_in_virtual_ships" />
+                        </li>
+                        <li>
+                            <button id="invalidate_cache">invalidate cache</button>
+                            <button id="copy_data">copy data to clipboard</button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div id="data">
+                    <div id="loading">Loading ...</div>
+                    <ul id="card_container">
+                        <li id="group_tpl" class="template group">
+                            <h2>{$name}</h2>
+                            <ul>
+                                <li id="card_tpl" class="template card">
+                                    <div class="image" style="{$image}"></div>
+                                    <h3 title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</h3>
+                                    <h4 class="{$hide_manufacturer}">{$manufacturer}</h4>
+                                    <h4 class="{$hide_type}">{$type}</h4>
+                                    <ul>
+                                        <li class="{$hide_insurance}">{$insurance}</li>
+                                        <li id="item_tpl" class="template item">
+                                            <div class="image" style="{$image}" has_image="{$has_image}"></div>
+                                            <span title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</span>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+<!--siis-->
+    </body>
+</html>
+<!--siie-->
+

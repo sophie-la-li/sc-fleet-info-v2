@@ -1,0 +1,36 @@
+{
+    "manifest_version": 3,
+    "name": "SC Fleet Info",
+    "version": "2.0.0",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "@sll-sc-fleet-info-v2",
+            "update_url": "https://raw.githubusercontent.com/sophie-la-li/sc-fleet-info-v2/refs/heads/main/firefox_updates.json",
+            "data_collection_permissions": {
+                "required": ["none"],
+                "optional": []
+            }
+        }
+    },
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "icons": {
+        "48": "icons/page-48.png"
+    },
+    "action": {
+        "default_icon": "icons/page-32.png"
+    },
+    "permissions": [
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://robertsspaceindustries.com/*"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }  
+}
+

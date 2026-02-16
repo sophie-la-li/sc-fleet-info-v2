@@ -1,0 +1,182 @@
+#scfi_body, #scfi_html {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    background: #111;
+}
+
+#scfi_wrapper {
+}
+
+#scfi {
+    padding: 30px;
+    background: #111;
+}
+
+#scfi * {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #fff;
+    font-weight: normal;
+}
+
+#scfi #window_menu {
+    display: none;
+}
+
+#scfi input, button, select {
+    background: rgba(41,81,99,1.0);
+    color: #fff;
+    padding: 5px;
+    font-size: 1em;
+    border: 1px solid #fff;
+    border-radius: 4px;
+}
+
+#scfi input, button {
+    padding: 5px 15px;
+}
+
+#scfi button:hover, select:hover {
+    background: rgba(51,120,148,1.0);
+}
+
+#scfi option {
+    padding: 5px 15px;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+#scfi option:checked {
+    background: rgba(26,35,43,1.0);
+}
+
+
+#scfi h1 {    
+    color: #4ee0ff;
+    text-transform: uppercase;
+}
+
+#scfi ul, li {
+    margin: 0;
+    padding: 0;
+}
+
+#scfi #sidebar {  
+    position: fixed;
+    z-index: 999;  
+    width: 300px;
+    height: 100%;
+    padding: 20px;
+    left: 0;
+    top: 0;
+}
+
+#scfi #sidebar > ul {  
+}
+
+#scfi #sidebar > ul > li {    
+    list-style-type: none;
+    margin: 20px 0;
+}
+
+#scfi #sidebar > ul > li > label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 10px;
+}
+
+#scfi #sidebar > ul > li > button {
+    display: block;
+    margin-bottom: 10px;
+}
+
+#scfi #data {
+   margin-left: 350px;
+}
+
+#scfi li.group {   
+    list-style-type: none;
+}
+
+#scfi li.group > h2 {   
+    color: #4ee0ff;
+    padding-bottom: 10px;
+    border-bottom: 5px solid #4ee0ff;
+    font-size: 1.5em;
+}
+
+#scfi li.group > ul {
+}
+
+#scfi li.card {
+    display: inline-block;
+    list-style-type: none;
+    vertical-align: top;
+    background: #222;
+    width: 200px;
+    padding: 10px;
+    margin: 10px;
+}
+
+#scfi li.card > div.image {
+    width: 100%;
+    height: 140px;
+    background-color: #111;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    margin-bottom: 10px;
+}
+
+#scfi li.card > h3 {
+    margin: 0 0 10px 0;
+    padding: 0;
+    color: #4ee0ff;
+    font-size: 1.2em;
+}
+
+#scfi li.card > h3 > a {  
+    color: #4ee0ff;
+    text-decoration: none;
+}
+
+#scfi li.card > h4 {
+    margin: -7px 0 10px 0;
+    padding: 0;
+    font-size: 0.8em;
+}
+
+#scfi li.card > ul {
+}
+
+#scfi li.card > ul > li {
+    list-style-type: none;
+    padding: 3px 6px;
+    background: #2a2a2a;
+    margin-bottom: 4px;
+}
+
+#scfi li.item {
+    position: relative;
+}
+
+#scfi li.item > div.image {
+    position: absolute;
+    right: 110%;
+    top: 0;
+    padding: 3px;
+    border: 3px solid #555;
+    background-color: #111;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: none;
+    z-index: 999;
+    width: 200px;
+    height: 140px;
+}
+
+
+
+

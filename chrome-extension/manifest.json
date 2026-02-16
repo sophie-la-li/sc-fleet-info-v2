@@ -1,0 +1,26 @@
+{
+    "manifest_version": 3,
+    "name": "SC Fleet Info",
+    "version": "2.0.0",
+    "update_url": "https://raw.githubusercontent.com/sophie-la-li/sc-fleet-info-v2/refs/heads/main/chrome_updates.xml",
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "icons": {
+        "48": "icons/page-48.png"
+    },
+    "action": {
+        "default_icon": "icons/page-32.png"
+    },
+    "permissions": [
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://robertsspaceindustries.com/*"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }  
+}
+
