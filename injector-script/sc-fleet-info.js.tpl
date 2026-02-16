@@ -79,6 +79,7 @@ function scfi_wrapper() {
             newNav.find('a').click(function(){ 
                 $('#scfi_wrapper').show();
                 update_data_and_list();
+                $(window).scrollTop(0);
             });
             $('div.sidenav ul').prepend(newNav);
         }
