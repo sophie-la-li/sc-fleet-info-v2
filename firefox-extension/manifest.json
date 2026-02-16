@@ -5,7 +5,7 @@
     "browser_specific_settings": {
         "gecko": {
             "id": "@sll-sc-fleet-info-v2",
-            "update_url": "https://raw.githubusercontent.com/sophie-la-li/sc-fleet-info-v2/refs/heads/main/firefox_updates.json",
+            "update_url": "https://raw.githubusercontent.com/sophie-la-li/sc-fleet-info-v2/refs/heads/main/firefox-updates.json",
             "data_collection_permissions": {
                 "required": ["none"],
                 "optional": []
