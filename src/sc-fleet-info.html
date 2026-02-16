@@ -17,9 +17,14 @@
                 </div>
 
                 <div id="sidebar">
-                    <h1>SC Fleet Info</h1>
-                    <div>2.0.0</div>
-                    <ul>
+                    <div id="sidebar_header">
+                        <h1>SC Fleet Info</h1>
+                        <div>
+                            <a href="https://github.com/sophie-la-li/sc-fleet-info-v2" target="_blank">Version 2.0.0</a> | 
+                            <a href="https://ko-fi.com/sophie_la_li" target="_blank">ko-fi</a>
+                        </div>
+                    </div>
+                    <ul id="forms">
                         <li>
                             <label>Group By:</label>
                             <select id="group_by">
@@ -41,10 +46,13 @@
                             <input type="checkbox" id="hide_paints_in_virtual_ships" />
                         </li>
                         <li>
-                            <button id="invalidate_cache">invalidate cache</button>
-                            <button id="copy_data">copy data to clipboard</button>
                         </li>
                     </ul>
+                    <div id="sidebar_footer">
+                        <button id="invalidate_cache">refresh</button>
+                        <button id="copy_data">d2cb</button>
+                        <button id="insert_data">cb2d</button>
+                    </div>
                 </div>
                 
                 <div id="data">
@@ -56,6 +64,7 @@
                                 <li id="card_tpl" class="template card">
                                     <div class="image" style="{$image}"></div>
                                     <h3 title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</h3>
+                                    <div class="fleetyards_link" style="{$hide_fleetyards}" link_on_click="{$fleetyards_link}"></div>
                                     <h4 class="{$hide_manufacturer}">{$manufacturer}</h4>
                                     <h4 class="{$hide_type}">{$type}</h4>
                                     <ul>
@@ -69,6 +78,13 @@
                             </ul>
                         </li>
                     </ul>
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
                 </div>
             </div>
         </div>

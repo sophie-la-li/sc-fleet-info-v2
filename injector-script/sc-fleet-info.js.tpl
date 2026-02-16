@@ -20,7 +20,7 @@ function scfi_wrapper() {
             border-radius: 10px;
             box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
             position: relative;
-            padding: 30px;
+            padding: 20px 20px 20px 10px;
             min-height: 100%;
         }
 
@@ -29,11 +29,8 @@ function scfi_wrapper() {
         }
 
         #scfi #sidebar {  
-            position: initial;
+            position: relative;
             float: left;
-            width: auto;
-            height: auto;
-            padding: 0;
         }
 
         #scfi #data:after {
@@ -50,6 +47,10 @@ function scfi_wrapper() {
         }
 
         #scfi #close_button {
+        }
+
+        #scfi li.card {
+            margin: 8px;
         }
     `;
 
@@ -87,7 +88,7 @@ function scfi_wrapper() {
         // we have to fix it in all other links to the pledges list.
         $("a").each((index, element) => {
             let href = $(element).attr('href');
-            if (href != undefined && href.search(/^\/en\/account\/pledges/i) != -1) {
+            if (href != undefined && href.search(/^\/account\/pledges/i) != -1) {
                 href = href.replace(/(\&|)pagesize\=\d+(\&|)/, "");
                 let delim = '?';
                 if (href.search(/\?/) != -1) delim = '&';

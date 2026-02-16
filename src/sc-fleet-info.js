@@ -2,7 +2,10 @@
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
 
+const FLEETYARDS_HOST = 'https://fleetyards.net/ships/';
+
 const RSI_DATA_CACHE_KEY = 'scfi_raw_rsi_pledge_data';
+const RSI_DATA_CACHE_TTL = 600000;
 const SETTINGS_CACHE_KEY = 'scfi_settings';
 
 const TRANSLATIONS = {
@@ -48,6 +51,16 @@ const PAINT_MATCHING__MATCH_NAME_TO_ALT = {
     'a.t.l.s.': 'atls'
 };
 
+const FLEETYARDS_SHIP_NAME_FIXES = {
+    'Hercules Starlifter A2': 'A2 Hercules',
+    'Hercules Starlifter C2': 'C2 Hercules',
+    'Hercules Starlifter M2': 'M2 Hercules',
+    'F7CM Super Hornet': 'F7C-M Super Hornet',
+    'GRIN ROC DS': 'ROC DS',
+    'Genesis Starliner': 'GENESIS',
+    'MPUV C': 'MPUV CARGO'
+};
+
 let object_id = 0;
 let templates = {};
 let objects = [];
@@ -88,6 +101,9 @@ function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_
             card = card.replaceAll('{$pledge_value}', card_data.pledge_value);
             card = card.replaceAll('{$pledge_link}', card_data.pledge_link ? card_data.pledge_link : '');
             
+            card = card.replaceAll('{$fleetyards_link}', card_data.fleetyards_link ? card_data.fleetyards_link : '');
+            card = card.replaceAll('{$hide_fleetyards}', card_data.fleetyards_link ? '' : 'display:none;');
+        
             card = card.replaceAll('{$type}', tr('type_' + card_data.type, card_data.type));
             let hide_type = (grouped_by == 'type' || card_data.type == 'unknown');
             card = card.replaceAll('{$hide_type}', hide_type ? 'hide' : '');
@@ -204,6 +220,10 @@ function parse_object_into_ship_card(card) {
     
     card.manufacturer = card.object.manufacturer;
     card.virtual = card.object.virtual ? card.object.virtual : false;
+
+    let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
+    fyname = fyname.replace(/ /g, "-").toLowerCase();
+    card.fleetyards_link = FLEETYARDS_HOST + fyname + '/';
 
     for (lobj of card.object.linked) {
         if (lobj.type == 'pledge') {
@@ -581,10 +601,13 @@ function get_pledge_link(number) {
 let pledge_number = 1;
 function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
     return new Promise(function(resolve, reject) {
-        if (page == 1 && localStorage[RSI_DATA_CACHE_KEY]) {
-            console.log('using cached rsi data');
-            resolve(JSON.parse(localStorage[RSI_DATA_CACHE_KEY]));
-            return;
+        if (page == 1) {
+            let cached = get_cache(RSI_DATA_CACHE_KEY)
+            if (cached) {
+                console.log('using cached rsi data');
+                resolve(cached);
+                return;
+            }
         }
 
         fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
@@ -593,7 +616,7 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
 
                 if ($('.list-items .empy-list', $body).length > 0) {
                     console.log('caching fresh rsi data');
-                    localStorage[RSI_DATA_CACHE_KEY] = JSON.stringify(data);
+                    set_cache(RSI_DATA_CACHE_KEY, data, RSI_DATA_CACHE_TTL);
                     resolve(data);
                     return;
                 }
@@ -700,9 +723,42 @@ function copy_data_to_clipboard() {
     }
 
     let output = json_stringify(export_objects);
-    output += '\n\n' + json_stringify(cards);
     navigator.clipboard.writeText(output);
 };
+
+function use_data_from_clipboard() {
+    navigator.clipboard.readText().then(function(input) {
+        let import_objects = JSON.parse(input);
+        for (oid in import_objects) {
+            let links = import_objects[oid].linked;
+            import_objects[oid].linked = [];
+            for (loid of links) {
+                import_objects[oid].linked.push(import_objects[loid]);
+            }
+        }
+        objects = import_objects;
+        process_objects_and_update_list();
+    });
+};
+
+function set_cache(key, data, ttl = null) {
+    localStorage[key] = JSON.stringify(data);
+    if (ttl) {
+	    const now = new Date();
+        localStorage[key + '__ttl'] = now.getTime() + ttl;
+    }
+}
+
+function get_cache(key) {
+    if (!localStorage[key]) {
+        return null;
+    }
+	const now = new Date();
+    if (localStorage[key + '__ttl'] && now.getTime() > localStorage[key + '__ttl']) {
+        return null;
+    }
+    return JSON.parse(localStorage[key]);
+}
 
 function update_list() {
     $('#loading', $root).show();
@@ -714,6 +770,13 @@ function update_list() {
     $('#loading', $root).hide();
 };
 
+function process_objects_and_update_list() {
+    cards = build_cards_from_objects(objects)
+    update_list();
+    console.log(objects);
+    console.log(cards);
+};
+
 function update_data_and_list() {
     $('#loading', $root).show();
     $('#card_container', $root).empty();
@@ -722,10 +785,7 @@ function update_data_and_list() {
         objects = extract_objects_from_raw_pledges(raw_pledge_data);
         link_upgrades_to_ships(objects);
         link_paints_to_ships(objects);
-        cards = build_cards_from_objects(objects)
-        update_list();
-        console.log(objects);
-        console.log(cards);
+        process_objects_and_update_list();
     });
 };
 
@@ -742,7 +802,7 @@ function update_settings_and_list() {
     settings.group_by = $('#group_by', $root).val(); 
     settings.show_types = $('#show_types', $root).val(); 
     settings.hide_paints_in_virtual_ships = $('#hide_paints_in_virtual_ships', $root).prop('checked');
-    localStorage[SETTINGS_CACHE_KEY] = JSON.stringify(settings);
+    set_cache(SETTINGS_CACHE_KEY, settings)
     update_list();
 };
 
@@ -751,8 +811,9 @@ function main($root_, load_data = true) {
 
     templates = extract_templates();
 
-    if (localStorage[SETTINGS_CACHE_KEY]) {
-        settings = JSON.parse(localStorage[SETTINGS_CACHE_KEY]);    
+    let cached_settings = get_cache(SETTINGS_CACHE_KEY);
+    if (cached_settings) {
+        settings = cached_settings;    
     }
 
     $('#group_by', $root).val(settings.group_by);
@@ -766,6 +827,7 @@ function main($root_, load_data = true) {
 
     $('#invalidate_cache', $root).on('click', update_data_without_cache);
     $('#copy_data', $root).on('click', copy_data_to_clipboard);
+    $('#insert_data', $root).on('click', use_data_from_clipboard);
 
     if (load_data) {
         update_data_and_list();
