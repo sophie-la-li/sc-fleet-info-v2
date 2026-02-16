@@ -184,6 +184,10 @@
     font-size: 0.8em;
 }
 
+#scfi li.card > h4.unowned_ship {
+    color: #f66;
+}
+
 #scfi li.card > ul {
 }
 

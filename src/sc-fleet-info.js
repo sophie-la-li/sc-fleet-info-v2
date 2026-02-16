@@ -8,15 +8,6 @@ const RSI_DATA_CACHE_KEY = 'scfi_raw_rsi_pledge_data';
 const RSI_DATA_CACHE_TTL = 600000;
 const SETTINGS_CACHE_KEY = 'scfi_settings';
 
-const TRANSLATIONS = {
-    'group_ship': 'Ships',
-    'group_equipment': 'Equipment',
-    'group_decoration': 'Decorations',
-    'type_ship': 'Ship',
-    'type_equipment': 'Equipment',
-    'type_decoration': 'Decoration'
-};
-
 const PAINT_PARSING_FIXES = {
     'P-72': 'P72',
     'Archimedes Emerald Skin': 'Archimedes - Emerald Skin'
@@ -61,6 +52,15 @@ const FLEETYARDS_SHIP_NAME_FIXES = {
     'MPUV C': 'MPUV CARGO'
 };
 
+const TRANSLATIONS = {
+    'group_ship': 'Ships',
+    'group_equipment': 'Equipment',
+    'group_decoration': 'Decorations',
+    'type_ship': 'Ship',
+    'type_equipment': 'Equipment',
+    'type_decoration': 'Decoration'
+};
+
 let object_id = 0;
 let templates = {};
 let objects = [];
@@ -73,248 +73,143 @@ let settings = {
     hide_paints_in_virtual_ships: true
 };
 
-function tr(key, fallback = null) {
-    return TRANSLATIONS[key] ? TRANSLATIONS[key] : (fallback ? fallback : key);
+// HELPERS ---------------------------------------------------------------------------
+
+function set_cache(key, data, ttl = null) {
+    localStorage[key] = JSON.stringify(data);
+    if (ttl) {
+	    const now = new Date();
+        localStorage[key + '__ttl'] = now.getTime() + ttl;
+    }
 }
 
-function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_ships) {
-    templates['group_tpl'].root.empty();
+function get_cache(key) {
+    if (!localStorage[key]) {
+        return null;
+    }
+	const now = new Date();
+    if (localStorage[key + '__ttl'] && now.getTime() > localStorage[key + '__ttl']) {
+        return null;
+    }
+    return JSON.parse(localStorage[key]);
+}
 
-    for (card_group in grouped_cards) {
-        let cards = grouped_cards[card_group];
+// RSI RAW DATA EXTRACTION -----------------------------------------------------------
 
-        let group = templates['group_tpl'].html;
-        group = group.replaceAll('{$name}', tr('group_' + card_group, card_group));
+function cut(input) {
+    input = input.replaceAll('\n', '');
+    input = input.trim();
+    return input;
+};
 
-        let $group = $(group);
-        $group.removeAttr('id');
+function uncssbg(input) {
+    input = input.replaceAll('url("', '');
+    input = input.replaceAll('")', '');
+    return input;
+};
 
-        let $card_root = $(templates['card_tpl'].id, $group).parent();
-        $(templates['card_tpl'].id, $group).remove();
-        templates['group_tpl'].root.append($group);
+function get_pledge_link(number) {
+    return RSI_PLEDGES + '?pagesize=1&page=' + number;
+};
 
-        for (card_data of cards) {
-            let card = templates['card_tpl'].html;
-            card = card.replaceAll('{$name}', card_data.name);
-            card = card.replaceAll('{$image}', card_data.image ? 'background-image:url(\'' + card_data.image + '\')' : '');
-
-            card = card.replaceAll('{$pledge_value}', card_data.pledge_value);
-            card = card.replaceAll('{$pledge_link}', card_data.pledge_link ? card_data.pledge_link : '');
-            
-            card = card.replaceAll('{$fleetyards_link}', card_data.fleetyards_link ? card_data.fleetyards_link : '');
-            card = card.replaceAll('{$hide_fleetyards}', card_data.fleetyards_link ? '' : 'display:none;');
-        
-            card = card.replaceAll('{$type}', tr('type_' + card_data.type, card_data.type));
-            let hide_type = (grouped_by == 'type' || card_data.type == 'unknown');
-            card = card.replaceAll('{$hide_type}', hide_type ? 'hide' : '');
-
-            card = card.replaceAll('{$manufacturer}', card_data.manufacturer);
-            let hide_manufacturer = (grouped_by == 'manufacturer' || card_data.manufacturer == 'unknown');
-            card = card.replaceAll('{$hide_manufacturer}', hide_manufacturer ? 'hide' : '');
-
-            card = card.replaceAll('{$insurance}', card_data.insurance_short);
-            let hide_insurance = (grouped_by == 'insurance_short' || card_data.insurance_short == 'unknown');
-            card = card.replaceAll('{$hide_insurance}', hide_insurance ? 'hide' : '');
-            
-            let $card = $(card);
-            $card.removeAttr('id');
-            $('.hide', $card).hide();
-
-            let $item_root = $(templates['item_tpl'].id, $card).parent();
-            $(templates['item_tpl'].id, $card).remove();
-
-            let hide_card = card_data.virtual;
-
-            for (item_data of card_data.items) {
-                if (item_data.type == 'paint' 
-                    && card_data.virtual 
-                    && hide_paints_in_virtual_ships
-                ) continue;
-
-                let item = templates['item_tpl'].html;
-                item = item.replaceAll('{$name}', item_data.name);
-                item = item.replaceAll('{$image}', item_data.image ? 'background-image:url(\'' + item_data.image + '\')' : '');
-                item = item.replaceAll('{$has_image}', item_data.image ? '1' : '0');
-                item = item.replaceAll('{$pledge_value}', item_data.pledge_value);
-                item = item.replaceAll('{$pledge_link}', item_data.pledge_link ? item_data.pledge_link : '');
-                let $item = $(item);
-                $item.removeAttr('id');
-                $item_root.append($item);
-                hide_card = false;
-            }
-
-            if (!hide_card) {
-                $card_root.append($card);
+let pledge_number = 1;
+function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
+    return new Promise(function(resolve, reject) {
+        if (page == 1) {
+            let cached = get_cache(RSI_DATA_CACHE_KEY)
+            if (cached) {
+                console.log('using cached rsi data');
+                resolve(cached);
+                return;
             }
         }
 
-    }
-    
-    $('[link_on_click]', templates['group_tpl'].root).each(function() {
-        if ($(this).attr('link_on_click').length > 0) {
-            $(this).css('cursor', 'pointer');
-        }
-    })
+        fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
+            response.text().then(function(response_body) {
+                let $body = $(response_body);
 
-    $('[link_on_click]', templates['group_tpl'].root).on('click', function() {
-        if ($(this).attr('link_on_click').length > 0) {
-            window.open($(this).attr('link_on_click'), '_blank').focus();
-        }
-    })
+                if ($('.list-items .empy-list', $body).length > 0) {
+                    console.log('caching fresh rsi data');
+                    set_cache(RSI_DATA_CACHE_KEY, data, RSI_DATA_CACHE_TTL);
+                    resolve(data);
+                    return;
+                }
 
-    $('.item', templates['group_tpl'].root).on('mouseenter', function() {
-        $('div.image[has_image="1"]', this).show();
-    })
+                $('.list-items li', $body).each(function(index, $pledge) {
+                    let pledge_data = {};
 
-    $('.item', templates['group_tpl'].root).on('mouseleave', function() {
-        $('div.image[has_image="1"]', this).hide();
-    })
-};
+                    pledge_data.number = pledge_number++;
+                    pledge_data.link = get_pledge_link(pledge_data.number);
+                    pledge_data.title = cut($('.title-col h3', $pledge).children().remove().end().text());
+                    pledge_data.created_at = cut($('.date-col', $pledge).children().remove().end().text());
+                    pledge_data.contains = cut($('.items-col', $pledge).children().remove().end().text());
+                    pledge_data.value = $('.js-pledge-value', $pledge).attr('value');
+                    pledge_data.items = [];
 
-function extract_templates() {
-    let templates = {};
-    $('.template', $root).each(function(i, e) {
-        templates[$(e).attr('id')] = {
-            id:   '#' + $(e).attr('id'),
-            html: $(e).prop('outerHTML'),
-            root: $(e).parent()
-        }
-    });
-    $('.template', $root).each(function(i, e) {
-        $(e).remove();
-    });
-    return templates;
-};
-
-function filter_cards(cards, filter_by, values) {    
-    let filtered_cards = [];
-    for (card of cards) {
-        if (values.includes(card[filter_by])) {
-            filtered_cards.push(card);
-        }
-    }
-    return filtered_cards;
-};
-
-function group_cards(cards, group_by) {
-    let grouped_cards = {};
-    for (card of cards) {
-        let group_value = card[group_by] ? card[group_by] : 'zzzzz';
-        if (!grouped_cards[group_value]) {
-            grouped_cards[group_value] = [];
-        }
-        grouped_cards[group_value].push(card);
-    }
-
-    const sorted_grouped_cards = Object.keys(grouped_cards).sort().reduce(function(obj, key) {
-        if (key == 'zzzzz') key = 'unknown';
-        obj[key] = grouped_cards[key]; 
-        return obj;
-    }, {});
-
-    return sorted_grouped_cards;
-}
-
-function parse_object_into_ship_card(card) {
-    if (card.object.type != 'ship') return;
-    
-    card.manufacturer = card.object.manufacturer;
-    card.virtual = card.object.virtual ? card.object.virtual : false;
-
-    let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
-    fyname = fyname.replace(/ /g, "-").toLowerCase();
-    card.fleetyards_link = FLEETYARDS_HOST + fyname + '/';
-
-    for (lobj of card.object.linked) {
-        if (lobj.type == 'pledge') {
-            for (llobj of lobj.linked) {
-                llobj = structuredClone(llobj);
-                llobj.raw_data = null;
-                llobj.linked = null;
-
-                if (llobj.type == 'insurance') {
-                    if (!card.insurance
-                        || llobj.sub_type == 'lifetime'
-                        || (card.insurance && llobj.months > card.insurance.months)
-                    ) {
-                        card.insurance = llobj;
-                        card.insurance_short = llobj.name;
+                    pledge_data.image = uncssbg($('div.image', $pledge).css('background-image'));
+                    if (pledge_data.image.charAt(0) == '/') {
+                        pledge_data.image = RSI_HOST + pledge_data.image;
                     }
 
-                } else if (llobj.type == 'hangar'
-                    || llobj.type == 'gamepackage'
-                ) {
-                    let item = {};
-                    item.name = llobj.name;
-                    item.type = llobj.type;
-                    card.items.push(item);
-                }
-            }
+                    $('.with-images .item', $pledge).each(function(i, $item) {
+                        let item_data = {};
 
-        } else if (lobj.type == 'paint' || lobj.type == 'upgrade') {
-            let item = {};
-            item.name = lobj.name;
-            item.type = lobj.type;
-            item.image = lobj.image;
-            item.pledge_value = 'unknown';
-            item.pledge_link = null;
+                        item_data.name = cut($('.title', $item).text());
+                        item_data.extra = cut($('.liner', $item).text());
+                        item_data.type = cut($('.kind', $item).text());
 
-            for (llobj of lobj.linked) {
-                if (llobj.type == 'pledge') {   
-                    item.pledge_value = llobj.value;
-                    item.pledge_link = llobj.link;
-                    break;
-                }
-            }
+                        if ($('.image', $item).length !== 0) {
+                            item_data.image = uncssbg($('.image', $item).css('background-image'));
+                            if (item_data.image.charAt(0) == '/') {
+                                item_data.image = RSI_HOST + item_data.image;
+                            }
+                        }
 
-            card.items.push(item);
-        }
-    }
+                        pledge_data.items.push(item_data);
+                    });
+
+                    $('.without-images .item', $pledge).each(function(i, $item) {
+                        let item_data = {};
+                        item_data.name = cut($('.title', $item).text());    
+                        pledge_data.items.push(item_data);
+                    });
+
+                    data.push(pledge_data);
+                });
+
+                extract_raw_data_from_rsi_pledges(data, page + 1).then(function(data) {
+                    resolve(data);
+                });
+            });
+        });
+    });
 };
 
-function build_cards_from_objects(objects) {
-    let cards = [];
 
-    for (oid in objects) {
-        let obj = objects[oid];
-        let card = {};
-        card.type = obj.type;
-        card.name = obj.name;
-        card.manufacturer = 'unknown';
-        card.insurance_short = 'unknown';
-        card.pledge_value = 'unknown';
-        card.pledge_link = null;
-        card.insurance = null;
-        card.image = obj.image;
-        card.virtual = false;
-        card.object = obj;
-        card.items = [];
+function fetch_through_extension(input, init) {
+    return fetch(input, init);
+};
 
-        parse_object_into_ship_card(card);
-
-        for (lobj of card.object.linked) {
-            if (lobj.type == 'pledge') {
-                card.pledge_value = lobj.value;
-                card.pledge_link = lobj.link;
-                break;
+//siis
+function fetch_through_extension(input, init) {
+    return new Promise(function(resolve, reject) {
+        chrome.runtime.sendMessage({input, init}, messageResponse => {
+            const [response, error] = messageResponse;
+            if (response === null) {
+                reject(error);
+            } else {
+                const body = response.body ? new Blob([response.body]) : undefined;
+                resolve(new Response(body, {
+                    status: response.status,
+                    statusText: response.statusText,
+                }));
             }
-        }
-
-        card.object = null;
-
-        if (!['paint', 'insurance', 'pledge', 'upgrade', 'hangar', 'gamepackage'].includes(card.type)) {
-            cards.push(card);
-        }
-    }
-
-    cards.sort(function(a, b) {
-        if (a.name < b.name) return -1;
-        if (a.name > b.name) return 1;
-        return 0;
+        });
     });
+};
+//siie
 
-    return cards;
-}
+// OBJECT MAPPING --------------------------------------------------------------------
 
 function get_virtual_ship(name) {
     let ship = {};
@@ -448,32 +343,6 @@ function parse_raw_data_to_ship_object(object) {
     object.name_normalized = object.name.toLowerCase();
 };
 
-function parse_raw_data_to_decoration_object(object) {
-    if (object.type != 'unknown') return;
-    if (!/(hangar\sdecoration)/i.test(object.raw_data.type)
-        && !/poster/i.test(object.raw_data.name)
-    ) return;
-    object.type = 'decoration';
-};
-
-function parse_raw_data_to_gamepackage_object(object) {
-    if (object.type != 'unknown') return;
-    if (!/digital\sdownload/i.test(object.raw_data.name)) return;
-    object.type = 'gamepackage';
-};
-
-function parse_raw_data_to_wallpaper_object(object) {
-    if (object.type != 'unknown') return;
-    if (!/wallpaper/i.test(object.raw_data.name)) return;
-    object.type = 'wallpaper';
-};
-
-function parse_raw_data_to_hangar_object(object) {
-    if (object.type != 'unknown') return;
-    if (!/hangar/i.test(object.raw_data.name)) return;
-    object.type = 'hangar';
-};
-
 function parse_raw_data_to_upgrade_object(object) {
     if (object.type != 'unknown') return;
     if (!/upgrade(\s|$)/i.test(object.raw_data.name)) return;
@@ -508,11 +377,44 @@ function parse_raw_data_to_paint_object(object) {
     object.name = name_split[1].trim();
 };
 
+function parse_raw_data_to_decoration_object(object) {
+    if (object.type != 'unknown') return;
+    if (!/(hangar\sdecoration)/i.test(object.raw_data.type)
+        && !/(poster|miniature|model|plushie|cookie jar|coin|mug|pico|envelope|flag|planter|sextant|pennant|painting|charm|display)($|\s)/i.test(object.raw_data.name)
+    ) return;
+    object.type = 'decoration';
+};
+
+function parse_raw_data_to_gamepackage_object(object) {
+    if (object.type != 'unknown') return;
+    if (!/digital\sdownload/i.test(object.raw_data.name)) return;
+    object.type = 'gamepackage';
+};
+
+function parse_raw_data_to_wallpaper_object(object) {
+    if (object.type != 'unknown') return;
+    if (!/wallpaper/i.test(object.raw_data.name)) return;
+    object.type = 'wallpaper';
+};
+
+function parse_raw_data_to_hangar_object(object) {
+    if (object.type != 'unknown') return;
+    if (!/hangar/i.test(object.raw_data.name)) return;
+    object.type = 'hangar';
+};
+
+function parse_raw_data_to_weapon_object(object) {  
+    if (object.type != 'unknown') return;
+    if (!/pistol|rifle|smg|lmg|knife|grenade|shotgun/i.test(object.raw_data.name)) return;
+    object.type = 'weapon';
+};
+
 function parse_raw_data_to_equipment_object(object) {  
     if (object.type != 'unknown') return;
     if (!/equipment/i.test(object.raw_data.type)
-        && !/backpack|helmet|container|armor|legs|arms|core|hat|monocle|undersuit|pico/i.test(object.raw_data.name)
+        && !/(backpack|helmet|container|armor|legs|arms|core|hat|monocle|undersuit|sweater)($|\s)/i.test(object.raw_data.name)
     ) return;
+
     object.type = 'equipment';
 };
 
@@ -575,6 +477,7 @@ function extract_objects_from_raw_pledges(raw_pledged) {
             parse_raw_data_to_hangar_object(object);
             parse_raw_data_to_wallpaper_object(object);
             parse_raw_data_to_decoration_object(object);
+            parse_raw_data_to_weapon_object(object);
             parse_raw_data_to_equipment_object(object);
         }
     }
@@ -582,118 +485,143 @@ function extract_objects_from_raw_pledges(raw_pledged) {
     return objects;
 };
 
-function cut(input) {
-    input = input.replaceAll('\n', '');
-    input = input.trim();
-    return input;
+// CARD MAPPING ----------------------------------------------------------------------
+
+function filter_cards(cards, filter_by, values) {    
+    let filtered_cards = [];
+    for (card of cards) {
+        if (values.includes(card[filter_by])) {
+            filtered_cards.push(card);
+        }
+    }
+    return filtered_cards;
 };
 
-function uncssbg(input) {
-    input = input.replaceAll('url("', '');
-    input = input.replaceAll('")', '');
-    return input;
+function group_cards(cards, group_by) {
+    let grouped_cards = {};
+    for (card of cards) {
+        let group_value = card[group_by] ? card[group_by] : 'zzzzz';
+        if (!grouped_cards[group_value]) {
+            grouped_cards[group_value] = [];
+        }
+        grouped_cards[group_value].push(card);
+    }
+
+    const sorted_grouped_cards = Object.keys(grouped_cards).sort().reduce(function(obj, key) {
+        if (key == 'zzzzz') key = 'unknown';
+        obj[key] = grouped_cards[key]; 
+        return obj;
+    }, {});
+
+    return sorted_grouped_cards;
+}
+
+function parse_object_into_ship_card(card) {
+    if (card.object.type != 'ship') return;
+    
+    card.manufacturer = card.object.manufacturer;
+    card.virtual = card.object.virtual ? card.object.virtual : false;
+
+    let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
+    fyname = fyname.replace(/ /g, "-").toLowerCase();
+    card.fleetyards_link = FLEETYARDS_HOST + fyname + '/';
+
+    for (lobj of card.object.linked) {
+        if (lobj.type == 'pledge') {
+            for (llobj of lobj.linked) {
+                llobj = structuredClone(llobj);
+                llobj.raw_data = null;
+                llobj.linked = null;
+
+                if (llobj.type == 'insurance') {
+                    if (!card.insurance
+                        || llobj.sub_type == 'lifetime'
+                        || (card.insurance && llobj.months > card.insurance.months)
+                    ) {
+                        card.insurance = llobj;
+                        card.insurance_short = llobj.name;
+                    }
+
+                } else if (llobj.type == 'hangar'
+                    || llobj.type == 'gamepackage'
+                ) {
+                    let item = {};
+                    item.name = llobj.name;
+                    item.type = llobj.type;
+                    card.items.push(item);
+                }
+            }
+
+        } else if (lobj.type == 'paint' || lobj.type == 'upgrade') {
+            let item = {};
+            item.name = lobj.name;
+            item.type = lobj.type;
+            item.image = lobj.image;
+            item.pledge_value = 'unknown';
+            item.pledge_link = null;
+
+            for (llobj of lobj.linked) {
+                if (llobj.type == 'pledge') {   
+                    item.pledge_value = llobj.value;
+                    item.pledge_link = llobj.link;
+                    break;
+                }
+            }
+
+            card.items.push(item);
+        }
+    }
 };
 
-function get_pledge_link(number) {
-    return RSI_PLEDGES + '?pagesize=1&page=' + number;
-};
+function build_cards_from_objects(objects) {
+    let cards = [];
 
-let pledge_number = 1;
-function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
-    return new Promise(function(resolve, reject) {
-        if (page == 1) {
-            let cached = get_cache(RSI_DATA_CACHE_KEY)
-            if (cached) {
-                console.log('using cached rsi data');
-                resolve(cached);
-                return;
+    for (oid in objects) {
+        let obj = objects[oid];
+        let card = {};
+        card.type = obj.type;
+        card.name = obj.name;
+        card.manufacturer = 'unknown';
+        card.insurance_short = 'unknown';
+        card.pledge_value = 'unknown';
+        card.pledge_link = null;
+        card.insurance = null;
+        card.image = obj.image;
+        card.virtual = false;
+        card.object = obj;
+        card.items = [];
+
+        parse_object_into_ship_card(card);
+
+        for (lobj of card.object.linked) {
+            if (lobj.type == 'pledge') {
+                card.pledge_value = lobj.value;
+                card.pledge_link = lobj.link;
+                break;
             }
         }
 
-        fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
-            response.text().then(function(response_body) {
-                let $body = $(response_body);
+        card.object = null;
 
-                if ($('.list-items .empy-list', $body).length > 0) {
-                    console.log('caching fresh rsi data');
-                    set_cache(RSI_DATA_CACHE_KEY, data, RSI_DATA_CACHE_TTL);
-                    resolve(data);
-                    return;
-                }
+        if (!['paint', 'insurance', 'pledge', 'upgrade', 'hangar', 'gamepackage'].includes(card.type)) {
+            cards.push(card);
+        }
+    }
 
-                $('.list-items li', $body).each(function(index, $pledge) {
-                    let pledge_data = {};
-
-                    pledge_data.number = pledge_number++;
-                    pledge_data.link = get_pledge_link(pledge_data.number);
-                    pledge_data.title = cut($('.title-col h3', $pledge).children().remove().end().text());
-                    pledge_data.created_at = cut($('.date-col', $pledge).children().remove().end().text());
-                    pledge_data.contains = cut($('.items-col', $pledge).children().remove().end().text());
-                    pledge_data.value = $('.js-pledge-value', $pledge).attr('value');
-                    pledge_data.items = [];
-
-                    pledge_data.image = uncssbg($('div.image', $pledge).css('background-image'));
-                    if (pledge_data.image.charAt(0) == '/') {
-                        pledge_data.image = RSI_HOST + pledge_data.image;
-                    }
-
-                    $('.with-images .item', $pledge).each(function(i, $item) {
-                        let item_data = {};
-
-                        item_data.name = cut($('.title', $item).text());
-                        item_data.extra = cut($('.liner', $item).text());
-                        item_data.type = cut($('.kind', $item).text());
-
-                        if ($('.image', $item).length !== 0) {
-                            item_data.image = uncssbg($('.image', $item).css('background-image'));
-                            if (item_data.image.charAt(0) == '/') {
-                                item_data.image = RSI_HOST + item_data.image;
-                            }
-                        }
-
-                        pledge_data.items.push(item_data);
-                    });
-
-                    $('.without-images .item', $pledge).each(function(i, $item) {
-                        let item_data = {};
-                        item_data.name = cut($('.title', $item).text());    
-                        pledge_data.items.push(item_data);
-                    });
-
-                    data.push(pledge_data);
-                });
-
-                extract_raw_data_from_rsi_pledges(data, page + 1).then(function(data) {
-                    resolve(data);
-                });
-            });
-        });
+    cards.sort(function(a, b) {
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return 1;
+        return 0;
     });
-};
 
+    return cards;
+}
 
-function fetch_through_extension(input, init) {
-    return fetch(input, init);
-};
+// DEBUGGING -------------------------------------------------------------------------
 
-//siis
-function fetch_through_extension(input, init) {
-    return new Promise(function(resolve, reject) {
-        chrome.runtime.sendMessage({input, init}, messageResponse => {
-            const [response, error] = messageResponse;
-            if (response === null) {
-                reject(error);
-            } else {
-                const body = response.body ? new Blob([response.body]) : undefined;
-                resolve(new Response(body, {
-                    status: response.status,
-                    statusText: response.statusText,
-                }));
-            }
-        });
-    });
+function json_stringify(object, space = "    ") {
+    return JSON.stringify(object, get_circular_replacer(), space);
 };
-//siie
 
 function get_circular_replacer() {
     const ancestors = [];
@@ -741,24 +669,124 @@ function use_data_from_clipboard() {
     });
 };
 
-function set_cache(key, data, ttl = null) {
-    localStorage[key] = JSON.stringify(data);
-    if (ttl) {
-	    const now = new Date();
-        localStorage[key + '__ttl'] = now.getTime() + ttl;
-    }
+// RENDERING -------------------------------------------------------------------------
+
+function tr(key, fallback = null) {
+    return TRANSLATIONS[key] ? TRANSLATIONS[key] : (fallback ? fallback : key);
 }
 
-function get_cache(key) {
-    if (!localStorage[key]) {
-        return null;
+function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_ships) {
+    templates['group_tpl'].root.empty();
+
+    for (card_group in grouped_cards) {
+        let cards = grouped_cards[card_group];
+
+        let group = templates['group_tpl'].html;
+        group = group.replaceAll('{$name}', tr('group_' + card_group, card_group));
+
+        let $group = $(group);
+        $group.removeAttr('id');
+
+        let $card_root = $(templates['card_tpl'].id, $group).parent();
+        $(templates['card_tpl'].id, $group).remove();
+        templates['group_tpl'].root.append($group);
+
+        for (card_data of cards) {
+            let card = templates['card_tpl'].html;
+            card = card.replaceAll('{$name}', card_data.name);
+            card = card.replaceAll('{$image}', card_data.image ? 'background-image:url(\'' + card_data.image + '\')' : '');
+
+            card = card.replaceAll('{$hide_unowned}', card_data.virtual ? '' : 'hide');
+
+            card = card.replaceAll('{$pledge_value}', card_data.pledge_value);
+            card = card.replaceAll('{$pledge_link}', card_data.pledge_link ? card_data.pledge_link : '');
+            
+            card = card.replaceAll('{$fleetyards_link}', card_data.fleetyards_link ? card_data.fleetyards_link : '');
+            card = card.replaceAll('{$hide_fleetyards}', card_data.fleetyards_link ? '' : 'hide');
+        
+            card = card.replaceAll('{$type}', tr('type_' + card_data.type, card_data.type));
+            let hide_type = (grouped_by == 'type' || card_data.type == 'unknown');
+            card = card.replaceAll('{$hide_type}', hide_type ? 'hide' : '');
+
+            card = card.replaceAll('{$manufacturer}', card_data.manufacturer);
+            let hide_manufacturer = (grouped_by == 'manufacturer' || card_data.manufacturer == 'unknown');
+            card = card.replaceAll('{$hide_manufacturer}', hide_manufacturer ? 'hide' : '');
+
+            card = card.replaceAll('{$insurance}', card_data.insurance_short);
+            let hide_insurance = (grouped_by == 'insurance_short' || card_data.insurance_short == 'unknown');
+            card = card.replaceAll('{$hide_insurance}', hide_insurance ? 'hide' : '');
+            
+            let $card = $(card);
+            $card.removeAttr('id');
+            $('.hide', $card).hide();
+
+            let $item_root = $(templates['item_tpl'].id, $card).parent();
+            $(templates['item_tpl'].id, $card).remove();
+
+            let hide_card = card_data.virtual;
+
+            for (item_data of card_data.items) {
+                if (item_data.type == 'paint' 
+                    && card_data.virtual 
+                    && hide_paints_in_virtual_ships
+                ) continue;
+
+                let item = templates['item_tpl'].html;
+                item = item.replaceAll('{$name}', item_data.name);
+                item = item.replaceAll('{$image}', item_data.image ? 'background-image:url(\'' + item_data.image + '\')' : '');
+                item = item.replaceAll('{$has_image}', item_data.image ? '1' : '0');
+                item = item.replaceAll('{$pledge_value}', item_data.pledge_value);
+                item = item.replaceAll('{$pledge_link}', item_data.pledge_link ? item_data.pledge_link : '');
+                let $item = $(item);
+                $item.removeAttr('id');
+                $item_root.append($item);
+                hide_card = false;
+            }
+
+            if (!hide_card) {
+                $card_root.append($card);
+            }
+        }
+
     }
-	const now = new Date();
-    if (localStorage[key + '__ttl'] && now.getTime() > localStorage[key + '__ttl']) {
-        return null;
-    }
-    return JSON.parse(localStorage[key]);
-}
+    
+    $('[link_on_click]', templates['group_tpl'].root).each(function() {
+        if ($(this).attr('link_on_click').length > 0) {
+            $(this).css('cursor', 'pointer');
+        }
+    })
+
+    $('[link_on_click]', templates['group_tpl'].root).on('click', function() {
+        if ($(this).attr('link_on_click').length > 0) {
+            window.open($(this).attr('link_on_click'), '_blank').focus();
+        }
+    })
+
+    $('.item', templates['group_tpl'].root).on('mouseenter', function() {
+        $('div.image[has_image="1"]', this).show();
+    })
+
+    $('.item', templates['group_tpl'].root).on('mouseleave', function() {
+        $('div.image[has_image="1"]', this).hide();
+    })
+};
+
+function extract_templates() {
+    let templates = {};
+    $('.template', $root).each(function(i, e) {
+        templates[$(e).attr('id')] = {
+            id:   '#' + $(e).attr('id'),
+            html: $(e).prop('outerHTML'),
+            root: $(e).parent()
+        }
+    });
+    $('.template', $root).each(function(i, e) {
+        $(e).remove();
+    });
+    return templates;
+};
+
+// INITIATION ------------------------------------------------------------------------
 
 function update_list() {
     $('#loading', $root).show();
@@ -792,10 +820,6 @@ function update_data_and_list() {
 function update_data_without_cache() {
     localStorage.removeItem(RSI_DATA_CACHE_KEY);
     update_data_and_list();
-};
-
-function json_stringify(object, space = "    ") {
-    return JSON.stringify(object, get_circular_replacer(), space);
 };
 
 function update_settings_and_list() {
