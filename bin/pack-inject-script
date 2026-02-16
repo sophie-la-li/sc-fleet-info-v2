@@ -3,9 +3,9 @@
 SCRIPT_DIR=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 
 SRC_DIR=$SCRIPT_DIR/../src
-SRC_HTML_FILE=$SRC_DIR/fleet-info.html
-SRC_CSS_FILE=$SRC_DIR/fleet-info.css
-SRC_SCRIPT_FILE=$SRC_DIR/fleet-info.js
+SRC_HTML_FILE=$SRC_DIR/sc-fleet-info.html
+SRC_CSS_FILE=$SRC_DIR/sc-fleet-info.css
+SRC_SCRIPT_FILE=$SRC_DIR/sc-fleet-info.js
 
 DEST_DIR=$SCRIPT_DIR/../injector-script
 DEST_FILE=$DEST_DIR/sc-fleet-info.js

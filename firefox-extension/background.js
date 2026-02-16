@@ -3,7 +3,7 @@ chrome.action.onClicked.addListener(function() {
         if (tabs && tabs.length > 0) {
             chrome.tabs.update(tabs[0].id, {'active':true});
         } else {
-            chrome.tabs.create({'url':'/fleet-info.html'});
+            chrome.tabs.create({'url':'/sc-fleet-info.html'});
         }
     });
 });

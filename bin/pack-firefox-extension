@@ -4,7 +4,7 @@ SCRIPT_DIR=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 SRC_DIR=$SCRIPT_DIR/../src
 DEST_DIR=$SCRIPT_DIR/../firefox-extension
 
-cp $SRC_DIR/fleet-info.html $DEST_DIR/fleet-info.html
-cp $SRC_DIR/fleet-info.css $DEST_DIR/fleet-info.css
-cp $SRC_DIR/fleet-info.js $DEST_DIR/fleet-info.js
+cp $SRC_DIR/sc-fleet-info.html $DEST_DIR/sc-fleet-info.html
+cp $SRC_DIR/sc-fleet-info.css $DEST_DIR/sc-fleet-info.css
+cp $SRC_DIR/sc-fleet-info.js $DEST_DIR/sc-fleet-info.js
 
