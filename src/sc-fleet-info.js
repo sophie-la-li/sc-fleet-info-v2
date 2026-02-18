@@ -53,16 +53,19 @@ const FLEETYARDS_SHIP_NAME_FIXES = {
 };
 
 const TRANSLATIONS = {
-    'group_ship': 'Ships',
+    'group_ship': 'Vehicles',
     'group_equipment': 'Equipment',
     'group_decoration': 'Decorations',
-    'type_ship': 'Ship',
+    'group_weapon': 'Weapons',
+    'type_ship': 'Vehicle',
     'type_equipment': 'Equipment',
-    'type_decoration': 'Decoration'
+    'type_decoration': 'Decoration',
+    'type_weapon': 'Weapon'
 };
 
 let object_id = 0;
 let templates = {};
+let raw_pledge_data = [];
 let objects = [];
 let cards = [];
 let $root = null;
@@ -70,7 +73,8 @@ let $root = null;
 let settings = {
     group_by: 'type',
     show_types: ['ship'],
-    hide_paints_in_virtual_ships: true
+    hide_paints_in_virtual_ships: true,
+    hide_upgrades_in_virtual_ships: false
 };
 
 // HELPERS ---------------------------------------------------------------------------
@@ -115,22 +119,11 @@ function get_pledge_link(number) {
 let pledge_number = 1;
 function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
     return new Promise(function(resolve, reject) {
-        if (page == 1) {
-            let cached = get_cache(RSI_DATA_CACHE_KEY)
-            if (cached) {
-                console.log('using cached rsi data');
-                resolve(cached);
-                return;
-            }
-        }
-
         fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
             response.text().then(function(response_body) {
                 let $body = $(response_body);
 
                 if ($('.list-items .empy-list', $body).length > 0) {
-                    console.log('caching fresh rsi data');
-                    set_cache(RSI_DATA_CACHE_KEY, data, RSI_DATA_CACHE_TTL);
                     resolve(data);
                     return;
                 }
@@ -294,7 +287,7 @@ function link_paints_to_ships(objects) {
 
         for (mn in PAINT_MATCHING__MATCH_NAME_TO_ALT) {
             if (match_name.includes(mn)) {
-                alt_match_name = MATCH_NAME_TO_ALT[mn];
+                alt_match_name = PAINT_MATCHING__MATCH_NAME_TO_ALT[mn];
                 break;
             }
         }
@@ -338,6 +331,18 @@ function parse_raw_data_to_ship_object(object) {
 
     if (!/ship/i.test(object.raw_data.type) && !is_extra_ptv) return;
 
+    object.variant = null;
+
+    if (/(\d\d\d\d\sbest\sin\sshow)/i.test(object.name)) {
+        object.name = object.name.replace(/(\d\d\d\d\sbest\sin\sshow)/i, '').trim();
+        object.variant = "Best in Show Variant";
+    }
+
+    if (/(star\skitten\sedition)/i.test(object.name)) {
+        object.name = object.name.replace(/(star\skitten\sedition)/i, '').trim();
+        object.variant = "Star Kitten Edition";
+    }
+
     object.type = 'ship';
     object.manufacturer = object.raw_data.extra;
     object.name_normalized = object.name.toLowerCase();
@@ -373,8 +378,8 @@ function parse_raw_data_to_paint_object(object) {
         name = name.replaceAll(m, PAINT_PARSING_FIXES[m]);
     }
     let name_split = name.split('-');
-    object.for = name_split[0].trim();
-    object.name = name_split[1].trim();
+    object.for = name_split[0] ? name_split[0].trim() : 'unknown';
+    object.name = name_split[1] ? name_split[1].trim() : 'unknown';
 };
 
 function parse_raw_data_to_decoration_object(object) {
@@ -497,6 +502,17 @@ function filter_cards(cards, filter_by, values) {
     return filtered_cards;
 };
 
+function sort_cards(cards) {
+    cards.sort(function(a, b) {
+        if (a.virtual && !b.virtual) return 1;
+        if (!a.virtual && b.virtual) return -1;
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return 1;
+        return 0;
+    });
+    return cards;
+};
+
 function group_cards(cards, group_by) {
     let grouped_cards = {};
     for (card of cards) {
@@ -521,6 +537,7 @@ function parse_object_into_ship_card(card) {
     
     card.manufacturer = card.object.manufacturer;
     card.virtual = card.object.virtual ? card.object.virtual : false;
+    card.variant = card.object.variant ? card.object.variant : null;
 
     let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
     fyname = fyname.replace(/ /g, "-").toLowerCase();
@@ -559,6 +576,7 @@ function parse_object_into_ship_card(card) {
             item.image = lobj.image;
             item.pledge_value = 'unknown';
             item.pledge_link = null;
+            item.count = 1;
 
             for (llobj of lobj.linked) {
                 if (llobj.type == 'pledge') {   
@@ -608,12 +626,7 @@ function build_cards_from_objects(objects) {
         }
     }
 
-    cards.sort(function(a, b) {
-        if (a.name < b.name) return -1;
-        if (a.name > b.name) return 1;
-        return 0;
-    });
-
+    cards = sort_cards(cards)
     return cards;
 }
 
@@ -641,31 +654,44 @@ function get_circular_replacer() {
 };
 
 function copy_data_to_clipboard() {
-    let export_objects = {};
-    for (oid in objects) {
-        export_objects[oid] = structuredClone(objects[oid]);
-        export_objects[oid].linked = [];
-        for (linked of objects[oid].linked) {
-            export_objects[oid].linked.push(linked.id);
-        }
-    }
-
-    let output = json_stringify(export_objects);
+    let output = json_stringify(raw_pledge_data);
     navigator.clipboard.writeText(output);
 };
 
 function use_data_from_clipboard() {
     navigator.clipboard.readText().then(function(input) {
+        /*        
         let import_objects = JSON.parse(input);
+        raw_pledge_data_ = {};
+
         for (oid in import_objects) {
             let links = import_objects[oid].linked;
             import_objects[oid].linked = [];
+
+            if (import_objects[oid].type == 'pledge') {
+                raw_pledge_data_[import_objects[oid].raw_data.number] = import_objects[oid].raw_data;
+                raw_pledge_data_[import_objects[oid].raw_data.number].items = [];
+            }
+
             for (loid of links) {
                 import_objects[oid].linked.push(import_objects[loid]);
+
+                if (import_objects[loid].type == 'pledge'
+                    && raw_pledge_data_[import_objects[loid].raw_data.number] != undefined
+                ) {
+                    raw_pledge_data_[import_objects[loid].raw_data.number].items.push(
+                        import_objects[oid].raw_data
+                    )
+                }
             }
         }
         objects = import_objects;
-        process_objects_and_update_list();
+        raw_pledge_data = Object.values(raw_pledge_data_)
+        */
+
+        raw_pledge_data = JSON.parse(input);
+        set_cache(RSI_DATA_CACHE_KEY, raw_pledge_data, 6000000);
+        process_raw_data_and_update_list();
     });
 };
 
@@ -675,7 +701,7 @@ function tr(key, fallback = null) {
     return TRANSLATIONS[key] ? TRANSLATIONS[key] : (fallback ? fallback : key);
 }
 
-function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_ships) {
+function render_grouped_cards(grouped_cards) {
     templates['group_tpl'].root.empty();
 
     for (card_group in grouped_cards) {
@@ -694,7 +720,9 @@ function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_
         for (card_data of cards) {
             let card = templates['card_tpl'].html;
             card = card.replaceAll('{$name}', card_data.name);
+
             card = card.replaceAll('{$image}', card_data.image ? 'background-image:url(\'' + card_data.image + '\')' : '');
+            card = card.replaceAll('{$hide_image}', card_data.image || !card_data.virtual ? '' : 'hide');
 
             card = card.replaceAll('{$hide_unowned}', card_data.virtual ? '' : 'hide');
 
@@ -703,19 +731,22 @@ function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_
             
             card = card.replaceAll('{$fleetyards_link}', card_data.fleetyards_link ? card_data.fleetyards_link : '');
             card = card.replaceAll('{$hide_fleetyards}', card_data.fleetyards_link ? '' : 'hide');
-        
+                
             card = card.replaceAll('{$type}', tr('type_' + card_data.type, card_data.type));
-            let hide_type = (grouped_by == 'type' || card_data.type == 'unknown');
+            let hide_type = (settings.group_by == 'type' || card_data.type == 'unknown');
             card = card.replaceAll('{$hide_type}', hide_type ? 'hide' : '');
 
             card = card.replaceAll('{$manufacturer}', card_data.manufacturer);
-            let hide_manufacturer = (grouped_by == 'manufacturer' || card_data.manufacturer == 'unknown');
+            let hide_manufacturer = (settings.group_by == 'manufacturer' || card_data.manufacturer == 'unknown');
             card = card.replaceAll('{$hide_manufacturer}', hide_manufacturer ? 'hide' : '');
 
             card = card.replaceAll('{$insurance}', card_data.insurance_short);
-            let hide_insurance = (grouped_by == 'insurance_short' || card_data.insurance_short == 'unknown');
+            let hide_insurance = (settings.group_by == 'insurance_short' || card_data.insurance_short == 'unknown');
             card = card.replaceAll('{$hide_insurance}', hide_insurance ? 'hide' : '');
             
+            card = card.replaceAll('{$hide_variant}', card_data.variant != null ? '' : 'hide');
+            card = card.replaceAll('{$variant}', card_data.variant != null ? card_data.variant : 'unknown');
+
             let $card = $(card);
             $card.removeAttr('id');
             $('.hide', $card).hide();
@@ -728,7 +759,12 @@ function render_grouped_cards(grouped_cards, grouped_by, hide_paints_in_virtual_
             for (item_data of card_data.items) {
                 if (item_data.type == 'paint' 
                     && card_data.virtual 
-                    && hide_paints_in_virtual_ships
+                    && settings.hide_paints_in_virtual_ships
+                ) continue;
+
+                if (item_data.type == 'upgrade' 
+                    && card_data.virtual 
+                    && settings.hide_upgrades_in_virtual_ships
                 ) continue;
 
                 let item = templates['item_tpl'].html;
@@ -794,11 +830,17 @@ function update_list() {
 
     let filtered_cards = filter_cards(cards, 'type', settings.show_types);
     let grouped_cards = group_cards(filtered_cards, settings.group_by);
-    render_grouped_cards(grouped_cards, settings.group_by, settings.hide_paints_in_virtual_ships);
+    render_grouped_cards(grouped_cards);
     $('#loading', $root).hide();
 };
 
-function process_objects_and_update_list() {
+function process_raw_data_and_update_list() {
+    $('#loading', $root).show();
+    $('#card_container', $root).empty();
+
+    objects = extract_objects_from_raw_pledges(raw_pledge_data);
+    link_upgrades_to_ships(objects);
+    link_paints_to_ships(objects);
     cards = build_cards_from_objects(objects)
     update_list();
     console.log(objects);
@@ -809,12 +851,20 @@ function update_data_and_list() {
     $('#loading', $root).show();
     $('#card_container', $root).empty();
 
-    extract_raw_data_from_rsi_pledges().then(function(raw_pledge_data) {
-        objects = extract_objects_from_raw_pledges(raw_pledge_data);
-        link_upgrades_to_ships(objects);
-        link_paints_to_ships(objects);
-        process_objects_and_update_list();
-    });
+    let cached_raw_data = get_cache(RSI_DATA_CACHE_KEY)
+    if (cached_raw_data) {
+        console.log('using cached rsi data');
+        raw_pledge_data = cached_raw_data;
+        process_raw_data_and_update_list();
+
+    } else {
+        console.log('caching fresh rsi data');
+        extract_raw_data_from_rsi_pledges().then(function(raw_pledge_data_) {
+            raw_pledge_data = raw_pledge_data_;
+            set_cache(RSI_DATA_CACHE_KEY, raw_pledge_data, RSI_DATA_CACHE_TTL);
+            process_raw_data_and_update_list();
+        });
+    }
 };
 
 function update_data_without_cache() {
@@ -826,6 +876,7 @@ function update_settings_and_list() {
     settings.group_by = $('#group_by', $root).val(); 
     settings.show_types = $('#show_types', $root).val(); 
     settings.hide_paints_in_virtual_ships = $('#hide_paints_in_virtual_ships', $root).prop('checked');
+    settings.hide_upgrades_in_virtual_ships = $('#hide_upgrades_in_virtual_ships', $root).prop('checked');
     set_cache(SETTINGS_CACHE_KEY, settings)
     update_list();
 };
@@ -837,7 +888,7 @@ function main($root_, load_data = true) {
 
     let cached_settings = get_cache(SETTINGS_CACHE_KEY);
     if (cached_settings) {
-        settings = cached_settings;    
+        settings = {...settings, ...cached_settings};
     }
 
     $('#group_by', $root).val(settings.group_by);
@@ -848,6 +899,10 @@ function main($root_, load_data = true) {
 
     $('#hide_paints_in_virtual_ships', $root).prop('checked', settings.hide_paints_in_virtual_ships);
     $('#hide_paints_in_virtual_ships', $root).on('change', update_settings_and_list);
+
+
+    $('#hide_upgrades_in_virtual_ships', $root).prop('checked', settings.hide_upgrades_in_virtual_ships);
+    $('#hide_upgrades_in_virtual_ships', $root).on('change', update_settings_and_list);
 
     $('#invalidate_cache', $root).on('click', update_data_without_cache);
     $('#copy_data', $root).on('click', copy_data_to_clipboard);

@@ -52,6 +52,11 @@ function scfi_wrapper() {
         #scfi li.card {
             margin: 8px;
         }
+
+        #scfi #forms {  
+            overflow-y: unset;
+            height: auto;
+        }
     `;
 
     const SCFI_HTML = `

@@ -26,7 +26,7 @@
                     </div>
                     <ul id="forms">
                         <li>
-                            <label>Group by:</label>
+                            <label for="group_by">Group by:</label>
                             <select id="group_by">
                                 <option value="type">Type</option>
                                 <option value="manufacturer">Manufacturer</option>
@@ -34,17 +34,19 @@
                             </select>   
                         </li>
                         <li>
-                            <label>Show types:</label>
-                            <select id="show_types" multiple>
-                                <option value="ship">Ship</option>
+                            <label for="show_types">Show types:</label>
+                            <select id="show_types" size="5" multiple>
+                                <option value="ship">Vehicle</option>
                                 <option value="weapon">Weapon</option>
                                 <option value="equipment">Equipment</option>
                                 <option value="decoration">Decoration</option>
                             </select> 
                         </li>
-                        <li>
-                            <label>Hide orphaned paints:</label>
+                        <li class="checkbox">
                             <input type="checkbox" id="hide_paints_in_virtual_ships" />
+                            <label for="hide_paints_in_virtual_ships">Hide orphaned paints</label><br />
+                            <input type="checkbox" id="hide_upgrades_in_virtual_ships" />
+                            <label for="hide_upgrades_in_virtual_ships">Hide orphaned upgrades</label>
                         </li>
                         <li>
                         </li>
@@ -63,14 +65,17 @@
                             <h2>{$name}</h2>
                             <ul>
                                 <li id="card_tpl" class="template card">
-                                    <div class="image" style="{$image}"></div>
-                                    <h3 title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</h3>
-                                    <div class="fleetyards_link {$hide_fleetyards}" link_on_click="{$fleetyards_link}"></div>
-                                    <h4 class="{$hide_manufacturer}">{$manufacturer}</h4>
-                                    <h4 class="{$hide_type}">{$type}</h4>
-                                    <h4 class="unowned_ship {$hide_unowned}">You don't own this ship!</h4>
+                                    <div class="image {$hide_image}" style="{$image}"></div>
+                                    <div class="header">
+                                        <h3 title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</h3>
+                                        <div class="fleetyards_link {$hide_fleetyards}" link_on_click="{$fleetyards_link}"></div>
+                                        <h4 class="{$hide_manufacturer}">{$manufacturer}</h4>
+                                        <h4 class="{$hide_type}">{$type}</h4>
+                                        <h4 class="unowned_ship {$hide_unowned}">You don't own this vehicle!</h4>
+                                    </div>
                                     <ul>
-                                        <li class="{$hide_insurance}">{$insurance}</li>
+                                        <li class="item {$hide_variant}">{$variant}</li>
+                                        <li class="item {$hide_insurance}">{$insurance}</li>
                                         <li id="item_tpl" class="template item">
                                             <div class="image" style="{$image}" has_image="{$has_image}"></div>
                                             <span title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</span>
