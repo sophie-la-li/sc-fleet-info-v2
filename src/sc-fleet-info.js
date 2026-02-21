@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.6';
+const VERSION = '2.0.7';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -16,12 +16,9 @@ const PAINT_PARSING_FIXES = {
 };
 
 const PAINT_MATCHING__DONT_USE_SHORT_MATCH_NAME = [
-    'hull', 
-    'sabre raven', 
-    'roc ds', 
-    'a2', 
-    'c2', 
-    'm2'
+    'hull',
+    'sabre raven',
+    'roc ds'
 ];
 
 const PAINT_MATCHING__MATCH_NAME_TO_ALT = {
@@ -33,11 +30,11 @@ const PAINT_MATCHING__MATCH_NAME_TO_ALT = {
     'a1': 'spirit',
     'c1': 'spirit',
     'e1': 'spirit',
+    'a2': 'hercules',
+    'c2': 'hercules',
+    'm2': 'hercules',
     'c8r': 'c8 pisces',
     'c8x': 'c8 pisces',
-    'hercules starlifter a2': 'a2 hercules',
-    'hercules starlifter c2': 'c2 hercules',
-    'hercules starlifter m2': 'm2 hercules',
     '600i exploration module': '600i explorer',
     'csvsm': 'csv',
     'a.t.l.s.': 'atls'
@@ -65,6 +62,10 @@ const TRANSLATIONS = {
     'type_decoration': 'Decoration',
     'type_weapon': 'Weapon'
 };
+
+const REPLACE_GROUP_NAME_WITH = {
+    'insurance_months': 'insurance_short'
+}
 
 let object_id = 0;
 let templates = {};
@@ -290,7 +291,7 @@ function link_paints_to_ships(objects) {
         let alt_match_name = match_name;
 
         for (mn in PAINT_MATCHING__MATCH_NAME_TO_ALT) {
-            if (match_name.includes(mn)) {
+            if (ship.name_normalized.includes(mn)) {
                 alt_match_name = PAINT_MATCHING__MATCH_NAME_TO_ALT[mn];
                 break;
             }
@@ -340,11 +341,6 @@ function parse_raw_data_to_ship_object(object) {
     if (/(\d\d\d\d\sbest\sin\sshow)/i.test(object.name)) {
         object.name = object.name.replace(/(\d\d\d\d\sbest\sin\sshow)/i, '').trim();
         object.variant = "Best in Show Variant";
-    }
-
-    if (/(star\skitten\sedition)/i.test(object.name)) {
-        object.name = object.name.replace(/(star\skitten\sedition)/i, '').trim();
-        object.variant = "Star Kitten Edition";
     }
 
     object.type = 'ship';
@@ -434,10 +430,11 @@ function parse_raw_data_to_insurance_object(object) {
 
     if (/lifetime/i.test(object.raw_data.name)) {
         object.sub_type = 'lifetime';
+        object.months = 999;
 
     } else if (/iae/i.test(object.raw_data.name)) {
         object.sub_type = 'iae';
-        object.monthts = 120;
+        object.months = 120;
 
     } else {
         let irr = /(\d+)(\s+|-)month(s|)/i.exec(object.raw_data.name);
@@ -528,8 +525,9 @@ function group_cards(cards, group_by) {
     }
 
     const sorted_grouped_cards = Object.keys(grouped_cards).sort().reduce(function(obj, key) {
-        if (key == 'zzzzz') key = 'unknown';
-        obj[key] = grouped_cards[key]; 
+        let nkey = key
+        if (key == 'zzzzz') nkey = 'unknown';
+        obj[nkey] = grouped_cards[key]; 
         return obj;
     }, {});
 
@@ -563,6 +561,7 @@ function parse_object_into_ship_card(card) {
                     ) {
                         card.insurance = llobj;
                         card.insurance_short = llobj.name;
+                        card.insurance_months = llobj.months;
                     }
 
                 } else if (llobj.type == 'hangar'
@@ -607,6 +606,7 @@ function build_cards_from_objects(objects) {
         card.name = obj.name;
         card.manufacturer = 'unknown';
         card.insurance_short = 'unknown';
+        card.insurance_months = 0;
         card.pledge_value = 'unknown';
         card.pledge_link = null;
         card.insurance = null;
@@ -666,35 +666,6 @@ function copy_data_to_clipboard() {
 
 function use_data_from_clipboard() {
     navigator.clipboard.readText().then(function(input) {
-        /*        
-        let import_objects = JSON.parse(input);
-        raw_pledge_data_ = {};
-
-        for (oid in import_objects) {
-            let links = import_objects[oid].linked;
-            import_objects[oid].linked = [];
-
-            if (import_objects[oid].type == 'pledge') {
-                raw_pledge_data_[import_objects[oid].raw_data.number] = import_objects[oid].raw_data;
-                raw_pledge_data_[import_objects[oid].raw_data.number].items = [];
-            }
-
-            for (loid of links) {
-                import_objects[oid].linked.push(import_objects[loid]);
-
-                if (import_objects[loid].type == 'pledge'
-                    && raw_pledge_data_[import_objects[loid].raw_data.number] != undefined
-                ) {
-                    raw_pledge_data_[import_objects[loid].raw_data.number].items.push(
-                        import_objects[oid].raw_data
-                    )
-                }
-            }
-        }
-        objects = import_objects;
-        raw_pledge_data = Object.values(raw_pledge_data_)
-        */
-
         raw_pledge_data = JSON.parse(input);
         set_cache(RSI_DATA_CACHE_KEY, raw_pledge_data, 6000000);
         process_raw_data_and_update_list();
@@ -714,7 +685,14 @@ function render_grouped_cards(grouped_cards) {
         let cards = grouped_cards[card_group];
 
         let group = templates['group_tpl'].html;
-        group = group.replaceAll('{$name}', tr('group_' + card_group, card_group));
+
+        let group_name = card_group;
+        let replace_group_name_with = REPLACE_GROUP_NAME_WITH[settings.group_by] ?? null;
+        if (replace_group_name_with && cards[0]) {
+            group_name = cards[0][replace_group_name_with];
+        }
+
+        group = group.replaceAll('{$name}', tr('group_' + group_name, group_name));
 
         let $group = $(group);
         $group.removeAttr('id');
