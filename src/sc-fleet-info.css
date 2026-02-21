@@ -28,7 +28,7 @@
     background: rgb(41,81,99);
     color: #fff;
     padding: 5px;
-    font-size: 0.85em;
+    font-size: 13px;
     border: 1px solid #fff;
     border-radius: 4px;
 }
@@ -53,7 +53,7 @@
     padding: 5px 15px;
     margin: 2px 0;
     border-radius: 4px;
-    font-size: 0.85em;
+    font-size: 13px;
 }
 
 #scfi option:checked {
@@ -85,17 +85,17 @@
 #scfi #sidebar_header h1 {    
     color: #4ee0ff;
     text-transform: uppercase;  
-    font-size: 1.8em;
+    font-size: 26px;
     margin: 0;
 }
 
 #scfi #sidebar_header div {    
-    font-size: 0.8em;
+    font-size: 13px;
     color: #777;
 }
 
 #scfi #sidebar_header a {    
-    font-size: 0.8em;
+    font-size: 13px;
     color: #777;  
     text-decoration: none;
 }
@@ -108,7 +108,7 @@
     position: absolute;
     left: 20px;
     bottom: 20px;
-    font-size: 0.8em;
+    font-size: 13px;
 }
 
 #scfi #sidebar_footer button {    
@@ -132,6 +132,7 @@
     font-weight: bold;
     display: block;
     margin-bottom: 10px;
+    font-size: 14px;
 }
 
 #scfi #forms > li > button {
@@ -157,7 +158,7 @@
     color: #4ee0ff;
     padding-bottom: 10px;
     border-bottom: 5px solid #4ee0ff;
-    font-size: 1.5em;
+    font-size: 20px;
 }
 
 #scfi li.group > ul {
@@ -194,14 +195,14 @@
     margin: 0 40px 10px 0;
     padding: 0;
     color: #4ee0ff;
-    font-size: 1.2em;
+    font-size: 19px;
     display: inline-block;
 }
 
 #scfi li.card h4 {
     margin: -7px 0 10px 0;
     padding: 0;
-    font-size: 0.8em;
+    font-size: 13px;
 }
 
 #scfi li.card h4.unowned_ship {
@@ -213,7 +214,7 @@
     border-top: 1px solid rgb(29, 45, 66);
     list-style-type: none;
     padding: 4px 0;
-    font-size: 0.8em;
+    font-size: 13px;
 }
 
 #scfi li.item > div.image {

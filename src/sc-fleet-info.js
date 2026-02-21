@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.4';
+const VERSION = '2.0.5';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -348,7 +348,7 @@ function parse_raw_data_to_ship_object(object) {
     }
 
     object.type = 'ship';
-    object.manufacturer = object.raw_data.extra;
+    object.manufacturer = object.raw_data.extra.replace(/\(.*?\)/, '').trim();
     object.name_normalized = object.name.toLowerCase();
 };
 
