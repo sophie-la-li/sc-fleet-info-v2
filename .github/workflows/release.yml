@@ -42,5 +42,11 @@ jobs:
                         name: "sc-fleet-info.js",
                         data: await fs.readFileSync("injector-script/sc-fleet-info.js")
                     });
-
+                    await github.repos.uploadReleaseAsset({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: release.data.id,
+                        name: "sc-fleet-info-injector.js",
+                        data: await fs.readFileSync("injector-script/sc-fleet-info-injector.js")
+                    });
 
