@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.5';
+const VERSION = '2.0.6';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -543,9 +543,11 @@ function parse_object_into_ship_card(card) {
     card.virtual = card.object.virtual ? card.object.virtual : false;
     card.variant = card.object.variant ? card.object.variant : null;
 
-    let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
-    fyname = fyname.replace(/ /g, "-").toLowerCase();
-    card.fleetyards_link = FLEETYARDS_HOST + fyname + '/';
+    if (!card.virtual) {
+        let fyname = FLEETYARDS_SHIP_NAME_FIXES[card.name] || card.name
+        fyname = fyname.replace(/ /g, "-").toLowerCase();
+        card.fleetyards_link = FLEETYARDS_HOST + fyname + '/';
+    }
 
     for (lobj of card.object.linked) {
         if (lobj.type == 'pledge') {
@@ -732,6 +734,7 @@ function render_grouped_cards(grouped_cards) {
 
             card = card.replaceAll('{$pledge_value}', card_data.pledge_value);
             card = card.replaceAll('{$pledge_link}', card_data.pledge_link ? card_data.pledge_link : '');
+            card = card.replaceAll('{$hide_pledge_link}', card_data.pledge_link ? '' : 'hide');
             
             card = card.replaceAll('{$fleetyards_link}', card_data.fleetyards_link ? card_data.fleetyards_link : '');
             card = card.replaceAll('{$hide_fleetyards}', card_data.fleetyards_link ? '' : 'hide');
