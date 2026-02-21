@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.1';
+const VERSION = '2.0.2';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';

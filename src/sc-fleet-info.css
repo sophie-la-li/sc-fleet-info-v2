@@ -33,6 +33,10 @@
     border-radius: 4px;
 }
 
+#scfi button {
+    cursor: pointer;
+}
+
 #scfi input, button {
     padding: 5px 15px;
 }
