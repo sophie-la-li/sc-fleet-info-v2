@@ -1,8 +1,8 @@
 name: Release
 
 on:
-    push:
-        tags: ["*.*.*"]
+    release:
+        types: [created]
 
 jobs:
     publish:
@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-          - name: Install make
+          - name: Install Dependencies
             run: |
                 sudo apt update
                 sudo apt install -y --fix-missing build-essential
@@ -23,11 +23,24 @@ jobs:
                 make pack-all
 
           - name: Upload Release Assets
-            uses: softprops/action-gh-release@v1
+            uses: actions/github-script@v4
             with:
-                files: 'injector-script/sc-fleet-info.js'
-
-
-
+                script: |
+                    const fs = require('fs');
+                    const tag = context.ref.replace("refs/tags/", "");
+                    // Get release for this tag
+                    const release = await github.repos.getReleaseByTag({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        tag
+                    });
+                    // Upload the release asset
+                    await github.repos.uploadReleaseAsset({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: release.data.id,
+                        name: "sc-fleet-info.js",
+                        data: await fs.readFileSync("injector-script/sc-fleet-info.js")
+                    });
 
 
