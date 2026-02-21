@@ -19,8 +19,7 @@ const PAINT_MATCHING__DONT_USE_SHORT_MATCH_NAME = [
     'roc ds', 
     'a2', 
     'c2', 
-    'm2', 
-    '600i exploration module'
+    'm2'
 ];
 
 const PAINT_MATCHING__MATCH_NAME_TO_ALT = {
@@ -49,7 +48,9 @@ const FLEETYARDS_SHIP_NAME_FIXES = {
     'F7CM Super Hornet': 'F7C-M Super Hornet',
     'GRIN ROC DS': 'ROC DS',
     'Genesis Starliner': 'GENESIS',
-    'MPUV C': 'MPUV CARGO'
+    'MPUV C': 'MPUV CARGO',
+    '600i Exploration Module': '600i Explorer',
+    '600i Touring Module': '600i Touring'
 };
 
 const TRANSLATIONS = {
@@ -74,7 +75,8 @@ let settings = {
     group_by: 'type',
     show_types: ['ship'],
     hide_paints_in_virtual_ships: true,
-    hide_upgrades_in_virtual_ships: false
+    hide_upgrades_in_virtual_ships: false,
+    hide_hangars: true
 };
 
 // HELPERS ---------------------------------------------------------------------------
@@ -755,6 +757,7 @@ function render_grouped_cards(grouped_cards) {
             $(templates['item_tpl'].id, $card).remove();
 
             let hide_card = card_data.virtual;
+            let items ={};
 
             for (item_data of card_data.items) {
                 if (item_data.type == 'paint' 
@@ -767,14 +770,31 @@ function render_grouped_cards(grouped_cards) {
                     && settings.hide_upgrades_in_virtual_ships
                 ) continue;
 
+                if (item_data.type == 'hangar' 
+                    && settings.hide_hangars
+                ) continue;
+
                 let item = templates['item_tpl'].html;
                 item = item.replaceAll('{$name}', item_data.name);
                 item = item.replaceAll('{$image}', item_data.image ? 'background-image:url(\'' + item_data.image + '\')' : '');
                 item = item.replaceAll('{$has_image}', item_data.image ? '1' : '0');
                 item = item.replaceAll('{$pledge_value}', item_data.pledge_value);
                 item = item.replaceAll('{$pledge_link}', item_data.pledge_link ? item_data.pledge_link : '');
+                item = item.replaceAll('{$hide_pledge_link}', item_data.pledge_link ? '' : 'hide');
+
                 let $item = $(item);
+                $('.hide', $item).hide();
                 $item.removeAttr('id');
+
+                if (items[item_data.name] != undefined) {
+                    $('.icons', items[item_data.name]).append($('.icons', $item).children());
+                    items[item_data.name].item_count += 1;
+                    $('span.count', $(items[item_data.name])[0]).text(' (' + items[item_data.name].item_count + ')');
+                    continue;
+                }
+                $item.item_count = 1;
+                items[item_data.name] = $item;
+
                 $item_root.append($item);
                 hide_card = false;
             }
@@ -800,10 +820,12 @@ function render_grouped_cards(grouped_cards) {
 
     $('.item', templates['group_tpl'].root).on('mouseenter', function() {
         $('div.image[has_image="1"]', this).show();
+        $('div.icons', this).show();
     })
 
     $('.item', templates['group_tpl'].root).on('mouseleave', function() {
         $('div.image[has_image="1"]', this).hide();
+        $('div.icons', this).hide();
     })
 };
 
@@ -877,6 +899,7 @@ function update_settings_and_list() {
     settings.show_types = $('#show_types', $root).val(); 
     settings.hide_paints_in_virtual_ships = $('#hide_paints_in_virtual_ships', $root).prop('checked');
     settings.hide_upgrades_in_virtual_ships = $('#hide_upgrades_in_virtual_ships', $root).prop('checked');
+    settings.hide_hangars = $('#hide_hangars', $root).prop('checked');
     set_cache(SETTINGS_CACHE_KEY, settings)
     update_list();
 };
@@ -900,9 +923,11 @@ function main($root_, load_data = true) {
     $('#hide_paints_in_virtual_ships', $root).prop('checked', settings.hide_paints_in_virtual_ships);
     $('#hide_paints_in_virtual_ships', $root).on('change', update_settings_and_list);
 
-
     $('#hide_upgrades_in_virtual_ships', $root).prop('checked', settings.hide_upgrades_in_virtual_ships);
     $('#hide_upgrades_in_virtual_ships', $root).on('change', update_settings_and_list);
+
+    $('#hide_hangars', $root).prop('checked', settings.hide_hangars);
+    $('#hide_hangars', $root).on('change', update_settings_and_list);
 
     $('#invalidate_cache', $root).on('click', update_data_without_cache);
     $('#copy_data', $root).on('click', copy_data_to_clipboard);

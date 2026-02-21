@@ -1,0 +1,33 @@
+name: Release
+
+on:
+    push:
+        tags: ["*.*.*"]
+
+jobs:
+    publish:
+        name: Publish
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Install make
+            run: |
+                sudo apt update
+                sudo apt install -y --fix-missing build-essential
+
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Build Assets
+            run: |
+                make pack-all
+
+          - name: Upload Release Assets
+            uses: softprops/action-gh-release@v1
+            with:
+                files: 'injector-script/sc-fleet-info.js'
+
+
+
+
+

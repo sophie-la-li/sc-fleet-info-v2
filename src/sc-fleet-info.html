@@ -20,8 +20,8 @@
                     <div id="sidebar_header">
                         <h1>SC Fleet Info</h1>
                         <div>
-                            <a href="https://github.com/sophie-la-li/sc-fleet-info-v2" target="_blank">Version 2.0.0</a> | 
-                            <a href="https://ko-fi.com/sophie_la_li" target="_blank">ko-fi</a>
+                            <a href="https://github.com/sophie-la-li/sc-fleet-info-v2" target="_blank" title="visit GitHub">Version 2.0.0</a> | 
+                            <a href="https://ko-fi.com/sophie_la_li" target="_blank" title="visit Ko-fi and stand a tea">ko-fi</a>
                         </div>
                     </div>
                     <ul id="forms">
@@ -46,7 +46,9 @@
                             <input type="checkbox" id="hide_paints_in_virtual_ships" />
                             <label for="hide_paints_in_virtual_ships">Hide orphaned paints</label><br />
                             <input type="checkbox" id="hide_upgrades_in_virtual_ships" />
-                            <label for="hide_upgrades_in_virtual_ships">Hide orphaned upgrades</label>
+                            <label for="hide_upgrades_in_virtual_ships">Hide orphaned upgrades</label><br />
+                            <input type="checkbox" id="hide_hangars" />
+                            <label for="hide_hangars">Hide hangars</label>
                         </li>
                         <li>
                         </li>
@@ -67,8 +69,11 @@
                                 <li id="card_tpl" class="template card">
                                     <div class="image {$hide_image}" style="{$image}"></div>
                                     <div class="header">
-                                        <h3 title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</h3>
-                                        <div class="fleetyards_link {$hide_fleetyards}" link_on_click="{$fleetyards_link}"></div>
+                                        <h3>{$name}</h3>
+                                        <div class="icons">
+                                            <div title="show pledge with value of {$pledge_value}" class="pledge_link" link_on_click="{$pledge_link}">p</div>
+                                            <div title="visit Fleetyards page for this vehicle" class="fleetyards_link {$hide_fleetyards}" link_on_click="{$fleetyards_link}"></div>
+                                        </div>
                                         <h4 class="{$hide_manufacturer}">{$manufacturer}</h4>
                                         <h4 class="{$hide_type}">{$type}</h4>
                                         <h4 class="unowned_ship {$hide_unowned}">You don't own this vehicle!</h4>
@@ -78,7 +83,11 @@
                                         <li class="item {$hide_insurance}">{$insurance}</li>
                                         <li id="item_tpl" class="template item">
                                             <div class="image" style="{$image}" has_image="{$has_image}"></div>
-                                            <span title="Pledge Value: {$pledge_value}" link_on_click="{$pledge_link}">{$name}</span>
+                                            <div class="icons">
+                                                <div title="show pledge with value of {$pledge_value}" class="pledge_link {$hide_pledge_link}" link_on_click="{$pledge_link}">p</div>
+                                            </div>
+                                            <span>{$name}</span>
+                                            <span class="count"></span>
                                         </li>
                                     </ul>
                                 </li>
