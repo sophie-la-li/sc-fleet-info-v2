@@ -1,4 +1,6 @@
 
+const VERSION = '2.0.1';
+
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
 
@@ -906,6 +908,8 @@ function update_settings_and_list() {
 
 function main($root_, load_data = true) {
     $root = $root_;
+
+    $('#version', $root).text(VERSION);
 
     templates = extract_templates();
 
