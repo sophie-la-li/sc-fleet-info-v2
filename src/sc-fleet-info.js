@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.7';
+const VERSION = '2.0.8';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -106,12 +106,14 @@ function get_cache(key) {
 // RSI RAW DATA EXTRACTION -----------------------------------------------------------
 
 function cut(input) {
+    if (input == undefined) return "";
     input = input.replaceAll('\n', '');
     input = input.trim();
     return input;
 };
 
 function uncssbg(input) {
+    if (input == undefined) return "";
     input = input.replaceAll('url("', '');
     input = input.replaceAll('")', '');
     return input;
