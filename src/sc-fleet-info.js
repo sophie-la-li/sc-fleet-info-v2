@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.8';
+const VERSION = '2.0.9';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -124,6 +124,7 @@ function get_pledge_link(number) {
 };
 
 let pledge_number = 1;
+let last_rsi_page = 0;
 function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
     return new Promise(function(resolve, reject) {
         fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
@@ -134,6 +135,23 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
                     resolve(data);
                     return;
                 }
+
+                if (page == 1) {
+                    last_rsi_page = 0;
+                    var raquo = $('.billing-title-pager-wrapper .raquo', $body).attr('href');
+                    if (raquo != undefined) {
+                        last_rsi_page = raquo.replace(/^.*?page\=/, '').replace(/[^0-9]/, '');
+                    }
+                }
+
+                var loading_progress = 'Pulling data from RSI';
+                if (last_rsi_page > 0) {
+                    loading_progress += ': ' + page + '/' + last_rsi_page;
+                } else {
+                    loading_progress += '.';
+                }
+                $('#loading span', $root).text(loading_progress);
+
 
                 $('.list-items li', $body).each(function(index, $pledge) {
                     let pledge_data = {};
@@ -833,6 +851,7 @@ function extract_templates() {
 
 function update_list() {
     $('#loading', $root).show();
+    $('#loading span', $root).text("Building cards.");
     $('#card_container', $root).empty();
 
     let filtered_cards = filter_cards(cards, 'type', settings.show_types);
@@ -843,6 +862,7 @@ function update_list() {
 
 function process_raw_data_and_update_list() {
     $('#loading', $root).show();
+    $('#loading span', $root).text("Processing RSI data.");
     $('#card_container', $root).empty();
 
     objects = extract_objects_from_raw_pledges(raw_pledge_data);
@@ -850,12 +870,11 @@ function process_raw_data_and_update_list() {
     link_paints_to_ships(objects);
     cards = build_cards_from_objects(objects)
     update_list();
-    console.log(objects);
-    console.log(cards);
 };
 
 function update_data_and_list() {
     $('#loading', $root).show();
+    $('#loading span', $root).text("Pulling data from RSI.");
     $('#card_container', $root).empty();
 
     let cached_raw_data = get_cache(RSI_DATA_CACHE_KEY)
