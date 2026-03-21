@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.9';
+const VERSION = '2.0.10';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -468,6 +468,21 @@ function parse_raw_data_to_insurance_object(object) {
     }
 };
 
+function parse_raw_pledge_data_to_extra_insurance_object(pledge_object, objects) {
+    if (/surf and turf/i.test(pledge_object.raw_data.title)) {
+        let object = {};
+        object.id = object_id++;
+        object.image = pledge_object.image;
+        object.linked = [pledge_object];
+        object.name = 'Lifetime Insurance';
+        object.type = 'insurance';
+        object.sub_type = 'lifetime';
+        object.months = 999;
+        objects[object.id] = object;
+        pledge_object.linked.push(object);
+    }
+};
+
 function extract_objects_from_raw_pledges(raw_pledged) {
     object_id = 0;
     let objects = {};
@@ -506,6 +521,8 @@ function extract_objects_from_raw_pledges(raw_pledged) {
             parse_raw_data_to_weapon_object(object);
             parse_raw_data_to_equipment_object(object);
         }
+
+        parse_raw_pledge_data_to_extra_insurance_object(pledge_object, objects);
     }
 
     return objects;
