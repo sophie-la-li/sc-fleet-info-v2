@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.11';
+const VERSION = '2.0.12';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -18,10 +18,13 @@ const PAINT_PARSING_FIXES = {
 const PAINT_MATCHING__DONT_USE_SHORT_MATCH_NAME = [
     'hull',
     'sabre raven',
-    'roc ds'
+    'roc ds',
+    'aurora mk 2',
+    'aurora mk 1'
 ];
 
 const PAINT_MATCHING__MATCH_NAME_TO_ALT = {
+    'aurora mk 1': 'aurora mk 1',
     'mercury': 'star runner',
     'grin roc ds': 'roc',
     '100i': '100 series',
@@ -228,6 +231,16 @@ function fetch_through_extension(input, init) {
 
 // OBJECT MAPPING --------------------------------------------------------------------
 
+function replace_mk_number(input) {
+    output = input.replace(/Mk VI/i, 'mk 6');
+    output = output.replace(/Mk V/i, 'mk 5');
+    output = output.replace(/Mk IV/i, 'mk 4');
+    output = output.replace(/Mk III/i, 'mk 3');
+    output = output.replace(/Mk II/i, 'mk 2');
+    output = output.replace(/Mk I/i, 'mk 1');
+    return output;
+}
+
 function get_virtual_ship(name) {
     let ship = {};
     ship.id = object_id++;
@@ -254,7 +267,7 @@ function link_upgrades_to_ships(objects) {
         let ship = objects[oid];
         if (ship.type != 'ship') continue;
         for (upgrade of upgrades) {
-            if (upgrade.from.toLowerCase().includes(ship.name_normalized)) {
+            if (upgrade.from_normalized.includes(ship.name_normalized)) {
                 ship.linked.push(upgrade);
                 upgrade.linked.push(ship);
                 upgrade.has_linked_ships = true;
@@ -299,7 +312,7 @@ function link_paints_to_ships(objects) {
 
         let name_split = ship.name_normalized.split(' ');
         let match_name = name_split[0].trim();
-        
+
         for (match of PAINT_MATCHING__DONT_USE_SHORT_MATCH_NAME) {
             if (ship.name_normalized.includes(match)) {  
                 match_name = ship.name_normalized;
@@ -317,8 +330,8 @@ function link_paints_to_ships(objects) {
         }
 
         for (paint of paints) {
-            if (paint.for.toLowerCase().includes(match_name)
-                || paint.for.toLowerCase().includes(alt_match_name)
+            if (paint.for_normalized.includes(match_name)
+                || paint.for_normalized.includes(alt_match_name)
             ) {
                 ship.linked.push(paint);
                 paint.linked.push(ship);
@@ -365,6 +378,7 @@ function parse_raw_data_to_ship_object(object) {
     object.type = 'ship';
     object.manufacturer = object.raw_data.extra.replace(/\(.*?\)/, '').trim();
     object.name_normalized = object.name.toLowerCase();
+    object.name_normalized = replace_mk_number(object.name_normalized);
 };
 
 function parse_raw_data_to_upgrade_object(object) {
@@ -383,6 +397,12 @@ function parse_raw_data_to_upgrade_object(object) {
 
     object.from = parts[0].trim();
     object.to = parts[1].trim();
+
+    object.to_normalized = object.to.toLowerCase();
+    object.to_normalized = replace_mk_number(object.to_normalized);
+
+    object.from_normalized = object.from.toLowerCase();
+    object.from_normalized = replace_mk_number(object.from_normalized);
 };
 
 function parse_raw_data_to_paint_object(object) {
@@ -396,9 +416,13 @@ function parse_raw_data_to_paint_object(object) {
     for (m in PAINT_PARSING_FIXES) {
         name = name.replaceAll(m, PAINT_PARSING_FIXES[m]);
     }
+
     let name_split = name.split('-');
     object.for = name_split[0] ? name_split[0].trim() : 'unknown';
     object.name = name_split[1] ? name_split[1].trim() : 'unknown';
+
+    object.for_normalized = object.for.toLowerCase();
+    object.for_normalized = replace_mk_number(object.for_normalized);
 };
 
 function parse_raw_data_to_decoration_object(object) {
