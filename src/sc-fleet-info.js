@@ -1,5 +1,5 @@
 
-const VERSION = '2.0.10';
+const VERSION = '2.0.11';
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -131,11 +131,6 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
             response.text().then(function(response_body) {
                 let $body = $(response_body);
 
-                if ($('.list-items .empy-list', $body).length > 0) {
-                    resolve(data);
-                    return;
-                }
-
                 if (page == 1) {
                     last_rsi_page = 0;
                     var raquo = $('.billing-title-pager-wrapper .raquo', $body).attr('href');
@@ -151,7 +146,6 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
                     loading_progress += '.';
                 }
                 $('#loading span', $root).text(loading_progress);
-
 
                 $('.list-items li', $body).each(function(index, $pledge) {
                     let pledge_data = {};
@@ -194,6 +188,11 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
 
                     data.push(pledge_data);
                 });
+
+                if (page >= last_rsi_page) {
+                    resolve(data);
+                    return;
+                }
 
                 extract_raw_data_from_rsi_pledges(data, page + 1).then(function(data) {
                     resolve(data);
