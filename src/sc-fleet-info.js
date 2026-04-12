@@ -1,5 +1,5 @@
 
-const VERSION = '2.1.1';
+const VERSION = '2.1.2';
 
 const DEBUG = false;
 
@@ -944,11 +944,11 @@ function update_form_to_data() {
             types.push(card.type);
         }
     }
-    for (option of $('#show_types', $root).children()) {
-        option = $(option);
+    $('#show_types option', $root).each(function() {
+        let option = $(this);
         if (types.includes(option.val())) option.show();
         else option.hide();
-    }
+    });
     $('#show_types', $root).attr('size', types.length + 1);
 }
 
@@ -957,7 +957,7 @@ function update_list() {
     $('#loading span', $root).text("Building cards.");
     $('#card_container', $root).empty();
 
-    //update_form_to_data();
+    update_form_to_data();
     let filtered_cards = filter_cards(cards, 'type', settings.show_types);
     let grouped_cards = group_cards(filtered_cards, settings.group_by);
     render_grouped_cards(grouped_cards);
