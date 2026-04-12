@@ -1,5 +1,5 @@
 
-const VERSION = '2.1.2';
+const VERSION = '2.1.3';
 
 const DEBUG = false;
 
@@ -11,6 +11,8 @@ const FLEETYARDS_HOST = 'https://fleetyards.net/ships/';
 const RSI_DATA_CACHE_KEY = 'scfi_raw_rsi_pledge_data';
 const RSI_DATA_CACHE_TTL = 600000;
 const SETTINGS_CACHE_KEY = 'scfi_settings';
+
+const RSI_DEFAULT_PAGE_SIZE = 10;
 
 const PAINT_PARSING_FIXES = {
     'P-72': 'P72',
@@ -126,7 +128,8 @@ function uncssbg(input) {
     return input;
 };
 
-function get_pledge_link(number) {
+function get_pledge_link(number, page = undefined) {
+    if (page != undefined) return RSI_PLEDGES + '?pagesize=' + RSI_DEFAULT_PAGE_SIZE + '&page=' + page;
     return RSI_PLEDGES + '?pagesize=1&page=' + number;
 };
 
@@ -134,7 +137,7 @@ let pledge_number = 1;
 let last_rsi_page = 0;
 function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
     return new Promise(function(resolve, reject) {
-        fetch_through_extension(RSI_PLEDGES + '?pagesize=10&page=' + page, {method: 'GET'}).then(function(response) {
+        fetch_through_extension(RSI_PLEDGES + '?pagesize=' + RSI_DEFAULT_PAGE_SIZE + '&page=' + page, {method: 'GET'}).then(function(response) {
             response.text().then(function(response_body) {
                 let $body = $(response_body);
 
@@ -158,7 +161,7 @@ function extract_raw_data_from_rsi_pledges(data = [], page = 1) {
                     let pledge_data = {};
 
                     pledge_data.number = pledge_number++;
-                    pledge_data.link = get_pledge_link(pledge_data.number);
+                    pledge_data.link = get_pledge_link(pledge_data.number, page);
                     pledge_data.title = cut($('.title-col h3', $pledge).children().remove().end().text());
                     pledge_data.created_at = cut($('.date-col', $pledge).children().remove().end().text());
                     pledge_data.contains = cut($('.items-col', $pledge).children().remove().end().text());

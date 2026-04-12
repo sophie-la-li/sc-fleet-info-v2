@@ -98,7 +98,7 @@ function scfi_wrapper() {
                 href = href.replace(/(\&|)pagesize\=\d+(\&|)/, "");
                 let delim = '?';
                 if (href.search(/\?/) != -1) delim = '&';
-                $(element).attr('href', href + delim + 'pagesize=10');
+                $(element).attr('href', href + delim + 'pagesize=' + RSI_DEFAULT_PAGE_SIZE);
             }
         });
     };
