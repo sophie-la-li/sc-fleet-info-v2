@@ -957,7 +957,7 @@ function update_list() {
     $('#loading span', $root).text("Building cards.");
     $('#card_container', $root).empty();
 
-    update_form_to_data();
+    //update_form_to_data();
     let filtered_cards = filter_cards(cards, 'type', settings.show_types);
     let grouped_cards = group_cards(filtered_cards, settings.group_by);
     render_grouped_cards(grouped_cards);
