@@ -1,5 +1,7 @@
 
-const VERSION = '2.0.12';
+const VERSION = '2.1.0';
+
+const DEBUG = false;
 
 const RSI_HOST = 'https://robertsspaceindustries.com';
 const RSI_PLEDGES = RSI_HOST + '/en/account/pledges';
@@ -57,13 +59,15 @@ const FLEETYARDS_SHIP_NAME_FIXES = {
 
 const TRANSLATIONS = {
     'group_ship': 'Vehicles',
+    'group_component': 'Component',
     'group_equipment': 'Equipment',
     'group_decoration': 'Decorations',
     'group_weapon': 'Weapons',
     'type_ship': 'Vehicle',
     'type_equipment': 'Equipment',
     'type_decoration': 'Decoration',
-    'type_weapon': 'Weapon'
+    'type_weapon': 'Weapon',
+    'type_component': 'Component'
 };
 
 const REPLACE_GROUP_NAME_WITH = {
@@ -361,6 +365,37 @@ function link_paints_to_ships(objects) {
     }
 }
 
+function link_components_to_ships(objects) {
+    let components = [];
+
+    for (oid in objects) {
+        let obj = objects[oid];
+        if (obj.type == 'component') {
+            components.push(obj);
+        }
+    }
+
+    for (oid in objects) {
+        let ship = objects[oid];
+        if (ship.type != 'ship') continue;
+
+        let match_name = ship.name_normalized;
+
+        for (component of components) {
+            if (component.for_normalized.includes(match_name)) {
+                ship.linked.push(component);
+                component.linked.push(ship);
+                component.has_linked_ships = true;
+
+                // fix name
+                let name_replace_regex = new RegExp(ship.name, 'i');
+                component.name = component.name.replace(name_replace_regex, '').trim();
+                //component.for_normalized = match_name.replace(component.for_normalized, '').trim();
+            }
+        }
+    }
+}
+
 function parse_raw_data_to_ship_object(object) {
     if (object.type != 'unknown') return;
     let is_extra_ptv = /(hangar\sdecoration)/i.test(object.raw_data.type) 
@@ -421,6 +456,16 @@ function parse_raw_data_to_paint_object(object) {
     object.for = name_split[0] ? name_split[0].trim() : 'unknown';
     object.name = name_split[1] ? name_split[1].trim() : 'unknown';
 
+    object.for_normalized = object.for.toLowerCase();
+    object.for_normalized = replace_mk_number(object.for_normalized);
+};
+
+function parse_raw_data_to_component_object(object) {
+    if (object.type != 'unknown') return;
+    if (!/component/i.test(object.raw_data.type)) return;
+
+    object.type = 'component';
+    object.for = object.name; // we have no way to split name from for; needs to be fixed in linking stage
     object.for_normalized = object.for.toLowerCase();
     object.for_normalized = replace_mk_number(object.for_normalized);
 };
@@ -542,6 +587,7 @@ function extract_objects_from_raw_pledges(raw_pledged) {
             parse_raw_data_to_wallpaper_object(object);
             parse_raw_data_to_decoration_object(object);
             parse_raw_data_to_weapon_object(object);
+            parse_raw_data_to_component_object(object);
             parse_raw_data_to_equipment_object(object);
         }
 
@@ -634,7 +680,7 @@ function parse_object_into_ship_card(card) {
                 }
             }
 
-        } else if (lobj.type == 'paint' || lobj.type == 'upgrade') {
+        } else if (lobj.type == 'paint' || lobj.type == 'upgrade' || lobj.type == 'component') {
             let item = {};
             item.name = lobj.name;
             item.type = lobj.type;
@@ -687,7 +733,9 @@ function build_cards_from_objects(objects) {
 
         card.object = null;
 
-        if (!['paint', 'insurance', 'pledge', 'upgrade', 'hangar', 'gamepackage'].includes(card.type)) {
+        if (!['paint', 'insurance', 'pledge', 'upgrade', 'hangar', 'gamepackage'].includes(card.type)
+            && obj.has_linked_ships != true
+        ) {
             cards.push(card);
         }
     }
@@ -889,11 +937,27 @@ function extract_templates() {
 
 // INITIATION ------------------------------------------------------------------------
 
+function update_form_to_data() {
+    let types = [];
+    for (card of cards) {
+        if (!types.includes(card.type)) {
+            types.push(card.type);
+        }
+    }
+    for (option of $('#show_types', $root).children()) {
+        option = $(option);
+        if (types.includes(option.val())) option.show();
+        else option.hide();
+    }
+    $('#show_types', $root).attr('size', types.length + 1);
+}
+
 function update_list() {
     $('#loading', $root).show();
     $('#loading span', $root).text("Building cards.");
     $('#card_container', $root).empty();
 
+    update_form_to_data();
     let filtered_cards = filter_cards(cards, 'type', settings.show_types);
     let grouped_cards = group_cards(filtered_cards, settings.group_by);
     render_grouped_cards(grouped_cards);
@@ -905,10 +969,19 @@ function process_raw_data_and_update_list() {
     $('#loading span', $root).text("Processing RSI data.");
     $('#card_container', $root).empty();
 
+    if (DEBUG) console.log('raw data:', raw_pledge_data);
+
     objects = extract_objects_from_raw_pledges(raw_pledge_data);
     link_upgrades_to_ships(objects);
     link_paints_to_ships(objects);
+    link_components_to_ships(objects);
+
+    if (DEBUG) console.log('objects:', objects);
+
     cards = build_cards_from_objects(objects)
+
+    if (DEBUG) console.log('cards:', cards);
+
     update_list();
 };
 
@@ -919,12 +992,12 @@ function update_data_and_list() {
 
     let cached_raw_data = get_cache(RSI_DATA_CACHE_KEY)
     if (cached_raw_data) {
-        console.log('using cached rsi data');
+        if (DEBUG) console.log('using cached rsi data');
         raw_pledge_data = cached_raw_data;
         process_raw_data_and_update_list();
 
     } else {
-        console.log('caching fresh rsi data');
+        if (DEBUG) console.log('caching fresh rsi data');
         extract_raw_data_from_rsi_pledges().then(function(raw_pledge_data_) {
             raw_pledge_data = raw_pledge_data_;
             set_cache(RSI_DATA_CACHE_KEY, raw_pledge_data, RSI_DATA_CACHE_TTL);
